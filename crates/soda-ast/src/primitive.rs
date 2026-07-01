@@ -41,6 +41,29 @@ impl Primitive {
         Self::Not,
         Self::If,
     ];
+    pub fn from_name(name: &str) -> Option<Self> {
+        Some(match name {
+            "apply" => Self::Apply,
+            "subst" => Self::Substitute,
+            "alpha_eq" => Self::AlphaEq,
+            "fresh" => Self::Fresh,
+            "add" => Self::Add,
+            "sub" => Self::Subtract,
+            "mul" => Self::Multiply,
+            "div" => Self::Divide,
+            "mod" => Self::Remainder,
+            "eq" => Self::Equal,
+            "lt" => Self::Less,
+            "le" => Self::LessEqual,
+            "gt" => Self::Greater,
+            "ge" => Self::GreaterEqual,
+            "and" => Self::And,
+            "or" => Self::Or,
+            "not" => Self::Not,
+            "if" => Self::If,
+            _ => return None,
+        })
+    }
 
     pub const fn name(self) -> &'static str {
         match self {
@@ -65,4 +88,25 @@ impl Primitive {
         }
     }
 
+    pub const fn arity(self) -> usize {
+        match self {
+            Self::Not => 1,
+            Self::If | Self::Substitute => 3,
+            Self::Apply
+            | Self::AlphaEq
+            | Self::Fresh
+            | Self::Add
+            | Self::Subtract
+            | Self::Multiply
+            | Self::Divide
+            | Self::Remainder
+            | Self::Equal
+            | Self::Less
+            | Self::LessEqual
+            | Self::Greater
+            | Self::GreaterEqual
+            | Self::And
+            | Self::Or => 2,
+        }
+    }
 }
