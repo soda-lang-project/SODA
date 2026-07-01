@@ -86,6 +86,54 @@ impl Term {
         }
     }
 
+    pub fn at(&self, path: &[usize]) -> Option<&Self> {
+        match path.split_first() {
+            None => Some(self),
+            Some((index, rest)) => match self {
+                Self::App(_, args) => args.get(*index)?.at(rest),
+                Self::Binder { body, .. } if *index == 0 => body.at(rest),
+                _ => None,
+            },
+        }
+    }
+
+    /// Rejects replacement if either subtree depends on an enclosing bound name.
+    pub fn replace(&self, path: &[usize], replacement: Self) -> Option<Self> {
+        match path.split_first() {
+            None => Some(replacement),
+            Some((index, rest)) => {
+                if let Self::Binder {
+                    parameter,
+                    sort,
+                    body,
+                } = self
+                {
+                    if *index != 0
+                        || replacement.free_names().contains(parameter)
+                        || body.at(rest)?.free_names().contains(parameter)
+                    {
+                        return None;
+                    }
+
+                    return Some(Self::Binder {
+                        parameter: parameter.clone(),
+                        sort: sort.clone(),
+                        body: Box::new(body.replace(rest, replacement)?),
+                    });
+                }
+
+                let Self::App(name, args) = self else {
+                    return None;
+                };
+
+                let updated = args.get(*index)?.replace(rest, replacement)?;
+                let mut args = args.clone();
+                args[*index] = updated;
+
+                Some(Self::App(name.clone(), args))
+            }
+        }
+    }
 }
 
 impl fmt::Display for Term {
