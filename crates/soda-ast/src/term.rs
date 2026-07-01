@@ -21,6 +21,71 @@ impl Term {
         Self::App(name.into(), args)
     }
 
+    pub fn variables(&self) -> BTreeSet<String> {
+        let mut result = BTreeSet::new();
+        self.collect_variables(&mut result);
+
+        result
+    }
+
+    fn collect_variables(&self, result: &mut BTreeSet<String>) {
+        match self {
+            Self::Var(name) => {
+                result.insert(name.clone());
+            }
+            Self::Binder { body, .. } => body.collect_variables(result),
+            Self::App(_, args) => {
+                for arg in args {
+                    arg.collect_variables(result);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Simultaneous substitution; inserted terms are not substituted again.
+    pub fn substitute(&self, substitution: &Substitution) -> Self {
+        match self {
+            Self::Var(name) => substitution
+                .get(name)
+                .cloned()
+                .unwrap_or_else(|| self.clone()),
+            Self::Binder {
+                parameter,
+                sort,
+                body,
+            } => {
+                let variables = body.variables();
+                let inserted: BTreeSet<String> = substitution
+                    .iter()
+                    .filter(|(name, _)| variables.contains(*name))
+                    .flat_map(|(_, value)| value.free_names())
+                    .collect();
+
+                if inserted.contains(parameter) {
+                    let (parameter, body) = Self::freshen(parameter, body, &inserted);
+
+                    Self::Binder {
+                        parameter,
+                        sort: sort.clone(),
+                        body: Box::new(body.substitute(substitution)),
+                    }
+                } else {
+                    Self::Binder {
+                        parameter: parameter.clone(),
+                        sort: sort.clone(),
+                        body: Box::new(body.substitute(substitution)),
+                    }
+                }
+            }
+            Self::App(name, args) => Self::App(
+                name.clone(),
+                args.iter().map(|a| a.substitute(substitution)).collect(),
+            ),
+            _ => self.clone(),
+        }
+    }
+
 }
 
 impl fmt::Display for Term {
