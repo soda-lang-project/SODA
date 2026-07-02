@@ -33,3 +33,10 @@ fn metavariable_insertion_avoids_object_capture() {
     assert!(substituted.alpha_equivalent(&bind("z", name("x"))));
 }
 
+#[test]
+fn alpha_equivalence_handles_shadowing_and_free_names() {
+    assert!(bind("x", bind("x", name("x"))).alpha_equivalent(&bind("a", bind("b", name("b")))));
+    assert!(!bind("x", bind("y", name("x"))).alpha_equivalent(&bind("a", bind("b", name("b")))));
+    assert!(!bind("x", name("y")).alpha_equivalent(&bind("y", name("y"))));
+}
+
