@@ -50,3 +50,19 @@ fn matching_and_positions_conservatively_preserve_scopes() {
     assert_eq!(bind("x", name("x")).at(&[0]), Some(&name("x")));
 }
 
+#[test]
+fn binder_matching_solves_only_scope_independent_metavariables() {
+    let pattern = bind(
+        "x",
+        Term::app("pair", vec![name("x"), Term::Var("n".into())]),
+    );
+    let target = bind("y", Term::app("pair", vec![name("y"), Term::Int(3)]));
+    let substitution = match_term(&pattern, &target).unwrap();
+
+    assert_eq!(substitution["n"], Term::Int(3));
+    assert!(pattern.substitute(&substitution).alpha_equivalent(&target));
+    let dependent = bind("y", Term::app("pair", vec![name("y"), name("y")]));
+
+    assert!(match_term(&pattern, &dependent).is_none());
+}
+
