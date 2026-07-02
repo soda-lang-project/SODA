@@ -40,3 +40,13 @@ fn alpha_equivalence_handles_shadowing_and_free_names() {
     assert!(!bind("x", name("y")).alpha_equivalent(&bind("y", name("y"))));
 }
 
+#[test]
+fn matching_and_positions_conservatively_preserve_scopes() {
+    let pattern = bind("x", Term::Var("body".into()));
+
+    assert!(match_term(&pattern, &bind("y", name("y"))).is_none());
+    assert!(match_term(&bind("x", name("x")), &bind("y", name("y"))).is_some());
+    assert!(bind("x", Term::Int(0)).replace(&[0], name("x")).is_none());
+    assert_eq!(bind("x", name("x")).at(&[0]), Some(&name("x")));
+}
+
