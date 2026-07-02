@@ -66,3 +66,46 @@ fn binder_matching_solves_only_scope_independent_metavariables() {
     assert!(match_term(&pattern, &dependent).is_none());
 }
 
+#[test]
+fn binder_matching_handles_shadowing_free_names_and_repeated_variables() {
+    let variable = Term::Var("value".into());
+    let pattern = bind(
+        "x",
+        bind("x", Term::app("pair", vec![name("x"), variable.clone()])),
+    );
+    let target = bind(
+        "a",
+        bind("b", Term::app("pair", vec![name("b"), name("x")])),
+    );
+    let substitution = match_term(&pattern, &target).unwrap();
+
+    assert_eq!(substitution["value"], name("x"));
+    assert!(pattern.substitute(&substitution).alpha_equivalent(&target));
+    assert!(
+        match_term(
+            &pattern,
+            &bind(
+                "a",
+                bind("b", Term::app("pair", vec![name("a"), name("x")]))
+            )
+        )
+        .is_none()
+    );
+    let repeated = Term::app("pair", vec![variable.clone(), bind("x", variable)]);
+
+    assert!(
+        match_term(
+            &repeated,
+            &Term::app("pair", vec![Term::Int(1), bind("y", Term::Int(1))])
+        )
+        .is_some()
+    );
+    assert!(
+        match_term(
+            &repeated,
+            &Term::app("pair", vec![Term::Int(1), bind("y", Term::Int(2))])
+        )
+        .is_none()
+    );
+}
+
