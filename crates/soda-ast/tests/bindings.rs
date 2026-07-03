@@ -109,3 +109,36 @@ fn binder_matching_handles_shadowing_free_names_and_repeated_variables() {
     );
 }
 
+#[test]
+fn successful_binding_matches_reconstruct_the_target_modulo_alpha() {
+    let atoms = vec![name("x"), name("y"), Term::Int(1), Term::Var("m".into())];
+    let mut terms = atoms.clone();
+
+    for atom in &atoms {
+        terms.push(bind("x", atom.clone()));
+        terms.push(bind("y", atom.clone()));
+        terms.push(bind("x", bind("y", atom.clone())));
+        terms.push(bind("y", bind("x", atom.clone())));
+    }
+
+    for left in &atoms {
+        for right in &atoms {
+            terms.push(bind(
+                "x",
+                Term::app("pair", vec![left.clone(), right.clone()]),
+            ));
+        }
+    }
+
+    for pattern in &terms {
+        for target in &terms {
+            if let Some(substitution) = match_term(pattern, target) {
+                assert!(
+                    pattern.substitute(&substitution).alpha_equivalent(target),
+                    "{pattern} matched {target} with {substitution:?}"
+                );
+            }
+        }
+    }
+}
+
