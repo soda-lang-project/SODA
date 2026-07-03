@@ -51,3 +51,23 @@ fn positions_are_checked_and_replacement_preserves_context() {
     assert_eq!(term.to_string(), "pair(1, some(2))");
 }
 
+#[test]
+fn every_invalid_position_returns_none_including_extreme_indices() {
+    let term = Term::app("tree", vec![Term::app("leaf", vec![]), Term::Bool(true)]);
+
+    for path in [
+        vec![usize::MAX],
+        vec![0, 0],
+        vec![1, 0],
+        vec![2],
+        vec![0, usize::MAX],
+    ] {
+        assert_eq!(term.at(&path), None);
+        assert_eq!(term.replace(&path, Term::Int(7)), None);
+    }
+
+    assert_eq!(term.at(&[]), Some(&term));
+    assert_eq!(term.replace(&[], Term::Int(7)), Some(Term::Int(7)));
+    assert_eq!(Term::Int(1).replace(&[0], Term::Int(7)), None);
+}
+
