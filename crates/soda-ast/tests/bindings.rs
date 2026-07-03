@@ -142,3 +142,18 @@ fn successful_binding_matches_reconstruct_the_target_modulo_alpha() {
     }
 }
 
+#[test]
+fn substitution_preserves_free_names_despite_nested_fresh_name_collisions() {
+    let term = bind(
+        "y",
+        Term::app("pair", vec![name("x"), bind("y_0", name("y"))]),
+    );
+    let replaced = term.substitute_name("x", &name("y"));
+
+    assert_eq!(replaced.free_names(), ["y".into()].into());
+    assert!(replaced.alpha_equivalent(&bind(
+        "fresh",
+        Term::app("pair", vec![name("y"), bind("other", name("fresh"))])
+    )));
+    assert_eq!(term.substitute_name("absent", &name("y")), term);
+}
