@@ -94,3 +94,26 @@ fn matching_distinguishes_constructors_arities_and_literal_types() {
     );
 }
 
+#[test]
+fn variable_collection_and_substitution_recurse_through_constructor_arguments() {
+    let term = Term::app(
+        "pair",
+        vec![
+            Term::Var("x".into()),
+            Term::app("nested", vec![Term::Var("y".into()), Term::Var("x".into())]),
+        ],
+    );
+
+    assert_eq!(term.variables(), ["x".into(), "y".into()].into());
+    let substitution = [
+        ("x".into(), Term::Var("y".into())),
+        ("y".into(), Term::Int(2)),
+    ]
+    .into();
+
+    assert_eq!(
+        term.substitute(&substitution).to_string(),
+        "pair(?y, nested(2, ?y))"
+    );
+    assert_eq!(term.substitute(&Substitution::new()), term);
+}
