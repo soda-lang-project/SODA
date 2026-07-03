@@ -35,3 +35,19 @@ fn substitution_is_simultaneous() {
     );
 }
 
+#[test]
+fn positions_are_checked_and_replacement_preserves_context() {
+    let term = Term::app(
+        "pair",
+        vec![Term::Int(1), Term::app("some", vec![Term::Int(2)])],
+    );
+
+    assert_eq!(term.at(&[1, 0]), Some(&Term::Int(2)));
+    assert!(term.replace(&[99], Term::Int(0)).is_none());
+    assert!(term.replace(&[0, 0], Term::Int(0)).is_none());
+    let updated = term.replace(&[1, 0], Term::Int(3)).unwrap();
+
+    assert_eq!(updated.to_string(), "pair(1, some(3))");
+    assert_eq!(term.to_string(), "pair(1, some(2))");
+}
+
