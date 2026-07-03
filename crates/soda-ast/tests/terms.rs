@@ -71,3 +71,26 @@ fn every_invalid_position_returns_none_including_extreme_indices() {
     assert_eq!(Term::Int(1).replace(&[0], Term::Int(7)), None);
 }
 
+#[test]
+fn matching_distinguishes_constructors_arities_and_literal_types() {
+    let cases = [
+        (Term::app("a", vec![]), Term::app("b", vec![])),
+        (Term::app("a", vec![]), Term::app("a", vec![Term::Int(1)])),
+        (Term::Int(1), Term::Bool(true)),
+        (Term::Bool(false), Term::Bool(true)),
+        (Term::Int(1), Term::Var("x".into())),
+    ];
+
+    for (pattern, target) in cases {
+        assert!(match_term(&pattern, &target).is_none());
+    }
+
+    let target = Term::app("a", vec![Term::Int(1)]);
+
+    assert_eq!(match_term(&target, &target), Some(Substitution::new()));
+    assert_eq!(
+        match_term(&Term::Var("x".into()), &target).unwrap()["x"],
+        target
+    );
+}
+
