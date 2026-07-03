@@ -22,3 +22,16 @@ fn repeated_variables_constrain_matching() {
     );
 }
 
+#[test]
+fn substitution_is_simultaneous() {
+    let bindings = Substitution::from([
+        ("x".into(), Term::Var("y".into())),
+        ("y".into(), Term::Int(1)),
+    ]);
+
+    assert_eq!(
+        Term::Var("x".into()).substitute(&bindings),
+        Term::Var("y".into())
+    );
+}
+
