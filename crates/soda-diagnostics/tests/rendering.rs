@@ -17,3 +17,26 @@ fn source_positions_handle_crlf_unicode_eof_and_invalid_byte_boundaries() {
     );
 }
 
+#[test]
+fn human_diagnostic_snapshot_has_source_caret_help_and_no_ansi() {
+    let mut sources = SourceMap::default();
+    let source = sources.add("example.soda", "eval add(1, false);\n");
+    let diagnostic = Diagnostic::error("E1001", "this expression has the wrong sort")
+        .primary(source, Span::new(12, 17), "expected `Int`, found `Bool`")
+        .help("pass an integer as the second argument");
+    let output = render(
+        &diagnostic,
+        &sources,
+        &RenderOptions {
+            context_lines: 0,
+            ..RenderOptions::default()
+        },
+    );
+
+    assert_eq!(
+        output,
+        "error[E1001]: this expression has the wrong sort\n --> example.soda:1:13\n  |\n1 | eval add(1, false);\n  |             ^^^^^ expected `Int`, found `Bool`\n  |\n  = help: pass an integer as the second argument\n"
+    );
+    assert!(!output.contains('\x1b'));
+}
+
