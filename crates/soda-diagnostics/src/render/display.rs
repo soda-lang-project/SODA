@@ -26,6 +26,16 @@ pub(super) struct DisplaySource {
 }
 
 impl DisplaySource {
+    pub(super) fn file(source: &str, show_eof: bool) -> Self {
+        let mut display = Self::new(source);
+        // Keep the final empty line so the backend places EOF correctly.
+
+        if show_eof && source.ends_with('\n') {
+            display.text.push(' ');
+        }
+
+        display
+    }
 
     pub(super) fn new(source: &str) -> Self {
         let mut text = String::new();
@@ -71,4 +81,7 @@ impl DisplaySource {
         .1
     }
 
+    pub(super) fn range(&self, span: Span) -> std::ops::Range<usize> {
+        self.offset(span.start)..self.offset(span.end)
+    }
 }

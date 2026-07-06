@@ -5,7 +5,10 @@ pub use spelling::nearest;
 mod render;
 mod source;
 
-pub use render::{DEFAULT_RENDER_WIDTH, MAX_RENDER_WIDTH, MIN_RENDER_WIDTH, RenderOptions, Style, safe as escape_terminal};
+pub use render::{
+    DEFAULT_RENDER_WIDTH, MAX_RENDER_WIDTH, MIN_RENDER_WIDTH, RenderOptions, Style, render,
+    safe as escape_terminal,
+};
 pub use source::{SourceFile, SourceId, SourceMap, Span};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -103,6 +106,13 @@ pub struct Report {
 }
 
 impl Report {
+    pub fn render(&self, options: &RenderOptions) -> String {
+        self.diagnostics
+            .iter()
+            .map(|diagnostic| render(diagnostic, &self.sources, options))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
 
     pub fn to_json(&self) -> String {
         json::report(self)
