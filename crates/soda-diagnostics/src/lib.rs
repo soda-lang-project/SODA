@@ -1,7 +1,7 @@
 mod json;
 mod spelling;
 pub use json::SCHEMA_VERSION;
-
+pub use spelling::nearest;
 mod render;
 mod source;
 
