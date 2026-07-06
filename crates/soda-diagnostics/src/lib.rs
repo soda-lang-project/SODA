@@ -104,4 +104,7 @@ pub struct Report {
 
 impl Report {
 
+    pub fn to_json(&self) -> String {
+        json::report(self)
+    }
 }

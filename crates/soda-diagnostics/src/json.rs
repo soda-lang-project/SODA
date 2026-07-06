@@ -112,3 +112,18 @@ impl<'a> DiagnosticView<'a> {
     }
 }
 
+pub(crate) fn report(report: &Report) -> String {
+    let view = ReportView {
+        version: SCHEMA_VERSION,
+        diagnostics: report
+            .diagnostics
+            .iter()
+            .map(|diagnostic| DiagnosticView::new(diagnostic, &report.sources))
+            .collect(),
+    };
+    let mut json = serde_json::to_string(&view)
+        .expect("the diagnostic wire schema contains only JSON-safe values");
+    json.push('\n');
+
+    json
+}
