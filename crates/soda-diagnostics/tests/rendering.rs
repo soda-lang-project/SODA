@@ -104,3 +104,28 @@ fn long_source_lines_are_windowed_around_the_label() {
     assert!(output.len() < 350, "{output}");
 }
 
+#[test]
+fn distant_labels_on_one_line_have_separate_truthful_source_windows() {
+    let mut sources = SourceMap::default();
+    let text = format!("first {} last", "x".repeat(500));
+    let end = text.len();
+    let source = sources.add("distant", text);
+    let diagnostic = Diagnostic::error("E1", "two locations")
+        .primary(source, Span::new(end - 4, end), "last token")
+        .secondary(source, Span::new(0, 5), "first token");
+    let output = render(
+        &diagnostic,
+        &sources,
+        &RenderOptions {
+            width: 60,
+            ..RenderOptions::default()
+        },
+    );
+
+    assert!(output.contains("first "));
+    assert!(output.contains(" last"));
+    assert!(output.contains("^^^^ last token"), "{output}");
+    assert!(output.contains("----- first token"));
+    assert!(output.len() < 500, "{output}");
+}
+
