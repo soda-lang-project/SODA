@@ -40,3 +40,32 @@ fn human_diagnostic_snapshot_has_source_caret_help_and_no_ansi() {
     assert!(!output.contains('\x1b'));
 }
 
+#[test]
+fn ascii_and_color_are_independent_and_controls_are_never_executed() {
+    let mut sources = SourceMap::default();
+    let source = sources.add("evil\x1b[2J.soda", "eval bad\x1b[2J;\n");
+    let diagnostic = Diagnostic::error("E1", "bad\x1b[2J\u{202e}").primary(
+        source,
+        Span::new(5, 8),
+        "this token",
+    );
+    let output = render(
+        &diagnostic,
+        &sources,
+        &RenderOptions {
+            style: Style::Ascii,
+            color: true,
+            ..RenderOptions::default()
+        },
+    );
+
+    assert!(
+        output.contains("\x1b[") && output.contains("error") && output.contains("[E1]"),
+        "{output}"
+    );
+    assert!(!output.contains("\x1b[2J"));
+    assert!(!output.contains('\u{202e}'));
+    assert!(output.contains("evil\\u{1b}[2J.soda"));
+    assert!(!output.contains('│'));
+}
+
