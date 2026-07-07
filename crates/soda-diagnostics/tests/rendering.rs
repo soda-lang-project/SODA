@@ -129,3 +129,23 @@ fn distant_labels_on_one_line_have_separate_truthful_source_windows() {
     assert!(output.len() < 500, "{output}");
 }
 
+#[test]
+fn multiline_labels_collapse_distant_lines_and_have_an_end_message() {
+    let mut sources = SourceMap::default();
+    let text = "x\n".repeat(1000);
+    let source = sources.add("many", &text);
+    let output = render(
+        &Diagnostic::error("E1", "range").primary(
+            source,
+            Span::new(0, text.len() - 1),
+            "ends here",
+        ),
+        &sources,
+        &RenderOptions::default(),
+    );
+
+    assert!(output.contains("..."));
+    assert!(output.contains("ends here"));
+    assert!(output.len() < 1000);
+}
+
