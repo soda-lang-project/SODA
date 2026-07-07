@@ -69,3 +69,19 @@ fn ascii_and_color_are_independent_and_controls_are_never_executed() {
     assert!(!output.contains('│'));
 }
 
+#[test]
+fn display_columns_account_for_tabs_wide_characters_and_combining_marks() {
+    let mut sources = SourceMap::default();
+    let text = "\t漢 e\u{301} false";
+    let source = sources.add("unicode", text);
+    let start = text.find("false").unwrap();
+    let output = render(
+        &Diagnostic::error("E1", "unicode").primary(source, Span::new(start, start + 5), "here"),
+        &sources,
+        &RenderOptions::default(),
+    );
+
+    assert!(output.contains("|          ^^^^^ here"), "{output}");
+    assert!(output.contains("    漢 e\u{301} false"));
+}
+
