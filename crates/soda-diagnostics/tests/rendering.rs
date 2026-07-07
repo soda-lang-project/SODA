@@ -85,3 +85,22 @@ fn display_columns_account_for_tabs_wide_characters_and_combining_marks() {
     assert!(output.contains("    漢 e\u{301} false"));
 }
 
+#[test]
+fn long_source_lines_are_windowed_around_the_label() {
+    let mut sources = SourceMap::default();
+    let text = format!("{}bad{}", "x".repeat(500), "y".repeat(500));
+    let source = sources.add("long", text);
+    let output = render(
+        &Diagnostic::error("E1", "long").primary(source, Span::new(500, 503), "bad"),
+        &sources,
+        &RenderOptions {
+            width: 60,
+            ..RenderOptions::default()
+        },
+    );
+
+    assert!(output.contains("bad"));
+    assert!(output.contains("..."));
+    assert!(output.len() < 350, "{output}");
+}
+
