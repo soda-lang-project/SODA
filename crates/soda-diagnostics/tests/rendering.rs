@@ -149,3 +149,21 @@ fn multiline_labels_collapse_distant_lines_and_have_an_end_message() {
     assert!(output.len() < 1000);
 }
 
+#[test]
+fn related_labels_support_multiple_files_and_secondary_style() {
+    let mut sources = SourceMap::default();
+    let use_site = sources.add("argument", "false");
+    let declaration = sources.add("module", "function f(Int): Int;");
+    let output = render(
+        &Diagnostic::error("E1", "mismatch")
+            .primary(use_site, Span::new(0, 5), "wrong sort")
+            .secondary(declaration, Span::new(11, 14), "expected here"),
+        &sources,
+        &RenderOptions::default(),
+    );
+
+    assert!(output.contains("argument:1:1"));
+    assert!(output.contains("module:1:12"));
+    assert!(output.contains("--- expected here"));
+}
+
