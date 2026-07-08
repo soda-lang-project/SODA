@@ -192,3 +192,19 @@ fn json_is_deterministic_escaped_and_contains_machine_locations_and_fixes() {
     assert_eq!(json, report.to_json());
 }
 
+#[test]
+fn invalid_spans_and_unknown_sources_are_safe() {
+    let mut sources = SourceMap::default();
+    let source = sources.add("empty", "");
+    let output = render(
+        &Diagnostic::error("E1", "end")
+            .primary(source, Span::new(usize::MAX, 0), "EOF")
+            .secondary(999, Span::default(), "missing"),
+        &sources,
+        &RenderOptions::default(),
+    );
+
+    assert!(output.contains("empty:1:1"));
+    assert!(output.contains("^ EOF"));
+}
+
