@@ -208,3 +208,10 @@ fn invalid_spans_and_unknown_sources_are_safe() {
     assert!(output.contains("^ EOF"));
 }
 
+#[test]
+fn suggestions_are_conservative_and_deterministic() {
+    assert_eq!(nearest("addd", ["mul", "add", "and"]), Some("add"));
+    assert_eq!(nearest("completely_unrelated", ["mul", "add"]), None);
+    assert_eq!(nearest("a", ["b", "c"]), None);
+}
+
