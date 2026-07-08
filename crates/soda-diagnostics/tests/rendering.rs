@@ -167,3 +167,28 @@ fn related_labels_support_multiple_files_and_secondary_style() {
     assert!(output.contains("--- expected here"));
 }
 
+#[test]
+fn json_is_deterministic_escaped_and_contains_machine_locations_and_fixes() {
+    let mut report = Report::default();
+    let source = report.sources.add("a\"b", "λ\tbad");
+    let mut diagnostic =
+        Diagnostic::error("E1", "\"message\"\n\x00").primary(source, Span::new(3, 6), "label");
+    diagnostic.severity = Severity::Warning;
+    diagnostic.suggestions.push(Suggestion {
+        source,
+        span: Span::new(3, 6),
+        replacement: "good".into(),
+        message: "replace it".into(),
+    });
+    report.diagnostics.push(diagnostic);
+    let json = report.to_json();
+
+    assert!(json.starts_with("{\"version\":1,\"diagnostics\":["));
+    assert!(json.contains("\"severity\":\"warning\""));
+    assert!(json.contains("\"start\":3,\"end\":6,\"line\":1,\"column\":3"));
+    assert!(json.contains("\\\"message\\\"\\n\\u0000"));
+    assert!(json.contains("\"replacement\":\"good\""));
+    assert!(!json.contains('\x1b'));
+    assert_eq!(json, report.to_json());
+}
+
