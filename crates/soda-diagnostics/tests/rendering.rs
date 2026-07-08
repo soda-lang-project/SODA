@@ -233,3 +233,24 @@ fn unicode_style_uses_connected_gutters_and_primary_markers() {
     assert!(!output.contains('\x1b'));
 }
 
+#[test]
+fn patch_previews_support_multiline_replacements_and_keep_original_json_ranges() {
+    let mut report = Report::default();
+    let source = report.sources.add("patch.soda", "eval bad;\neval 1;\n");
+    let mut diagnostic =
+        Diagnostic::error("E1", "replace this term").primary(source, Span::new(5, 8), "bad term");
+    diagnostic.suggestions.push(Suggestion {
+        source,
+        span: Span::new(5, 8),
+        replacement: "good;\neval better".into(),
+        message: "use these inputs".into(),
+    });
+    report.diagnostics.push(diagnostic);
+    let output = report.render(&RenderOptions::default());
+
+    assert!(output.contains("help: use these inputs"), "{output}");
+    assert!(output.contains("eval good;"), "{output}");
+    assert!(output.contains("eval better;"), "{output}");
+    assert!(report.to_json().contains("\"start\":5,\"end\":8"));
+}
+
