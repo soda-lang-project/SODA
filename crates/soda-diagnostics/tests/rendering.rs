@@ -254,3 +254,35 @@ fn patch_previews_support_multiline_replacements_and_keep_original_json_ranges()
     assert!(report.to_json().contains("\"start\":5,\"end\":8"));
 }
 
+#[test]
+fn eof_after_a_newline_and_labels_after_escaped_controls_remain_renderable() {
+    let mut sources = SourceMap::default();
+    let source = sources.add("eof.soda", "eval 1;\n");
+    let output = render(
+        &Diagnostic::error("E1", "unexpected end").primary(
+            source,
+            Span::new(8, 8),
+            "expected a term",
+        ),
+        &sources,
+        &RenderOptions::default(),
+    );
+
+    assert!(output.contains("eof.soda:2:1"), "{output}");
+    let text = "\x1b[2J false";
+    let source = sources.add("safe.soda", text);
+    let start = text.find("false").unwrap();
+    let output = render(
+        &Diagnostic::error("E1", "bad input").primary(
+            source,
+            Span::new(start, start + 5),
+            "this Boolean",
+        ),
+        &sources,
+        &RenderOptions::default(),
+    );
+
+    assert!(output.contains("\\u{1b}[2J false"), "{output}");
+    assert!(output.contains("^^^^^ this Boolean"), "{output}");
+    assert!(!output.contains('\x1b'));
+}
