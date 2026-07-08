@@ -215,3 +215,21 @@ fn suggestions_are_conservative_and_deterministic() {
     assert_eq!(nearest("a", ["b", "c"]), None);
 }
 
+#[test]
+fn unicode_style_uses_connected_gutters_and_primary_markers() {
+    let mut sources = SourceMap::default();
+    let source = sources.add("unicode.soda", "eval false;\n");
+    let output = render(
+        &Diagnostic::error("E1", "wrong sort").primary(source, Span::new(5, 10), "expected Int"),
+        &sources,
+        &RenderOptions {
+            style: Style::Unicode,
+            ..RenderOptions::default()
+        },
+    );
+
+    assert!(output.contains("╭▸ unicode.soda:1:6"), "{output}");
+    assert!(output.contains("━━━━━ expected Int"), "{output}");
+    assert!(!output.contains('\x1b'));
+}
+
