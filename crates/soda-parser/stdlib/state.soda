@@ -1,0 +1,32 @@
+module SodaState;
+
+datatype StateResult;
+constructor state_answer(Int, Int): StateResult;
+
+function state_unit(Int): Fn(Int, StateResult);
+function state_bind(Fn(Int, StateResult), Fn(Int, Fn(Int, StateResult))): Fn(Int, StateResult);
+function state_resume(StateResult, Fn(Int, Fn(Int, StateResult))): StateResult;
+function state_get(): Fn(Int, StateResult);
+function state_put(Int): Fn(Int, StateResult);
+function state_modify(Fn(Int, Int)): Fn(Int, StateResult);
+function state_tick(): Fn(Int, StateResult);
+
+rule state_return: state_unit(?n) => bind(s: Int, state_answer(?n, @s));
+
+rule state_sequence: state_bind(?m, ?k) => bind(s: Int, state_resume(apply(?m, @s), ?k));
+
+rule state_continue: state_resume(state_answer(?a, ?s), ?k) => apply(apply(?k, ?a), ?s);
+
+rule state_read: state_get => bind(s: Int, state_answer(@s, @s));
+
+# The unused result of state updates is integer zero.
+rule state_write: state_put(?n) => bind(s: Int, state_answer(0, ?n));
+
+rule state_update: state_modify(?f) => bind(s: Int, state_answer(0, apply(?f, @s)));
+
+rule state_increment: state_tick => state_modify(bind(s: Int, add(@s, 1)));
+
+monad State {
+    bind = state_bind;
+    return = state_unit;
+};

@@ -1,0 +1,8 @@
+module SodaPrelude;
+import soda.data.nat;
+import soda.math.rational;
+import soda.collections;
+import soda.collections.sets;
+import soda.effects.state;
+import soda.effects.exceptions;
+import soda.probability;

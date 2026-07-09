@@ -1,0 +1,37 @@
+module SodaRational;
+
+# Exact nonnegative rational arithmetic; checked i64 cross products.
+# Use rational to check inputs; fraction is the public unchecked constructor.
+datatype Rational;
+constructor fraction(Int, Int): Rational;
+
+function rational(Int, Int): Rational;
+function radd(Rational, Rational): Rational;
+function rmul(Rational, Rational): Rational;
+function rcomplement(Rational): Rational;
+function rle(Rational, Rational): Bool;
+function probability(Rational): Bool;
+
+rule rational_checked: rational(?a, ?b) => fraction(?a, ?b) when and(ge(?a, 0), gt(?b, 0));
+
+rule rational_add:
+    radd(fraction(?a, ?b), fraction(?c, ?d))
+    => rational(add(mul(?a, ?d), mul(?c, ?b)), mul(?b, ?d));
+
+rule rational_multiply:
+    rmul(fraction(?a, ?b), fraction(?c, ?d))
+    => rational(mul(?a, ?c), mul(?b, ?d));
+
+rule rational_complement:
+    rcomplement(fraction(?a, ?b))
+    => rational(sub(?b, ?a), ?b)
+    when and(gt(?b, 0), and(ge(?a, 0), le(?a, ?b)));
+
+rule rational_order:
+    rle(fraction(?a, ?b), fraction(?c, ?d))
+    => le(mul(?a, ?d), mul(?c, ?b))
+    when and(gt(?b, 0), gt(?d, 0));
+
+rule rational_probability:
+    probability(fraction(?a, ?b))
+    => and(gt(?b, 0), and(ge(?a, 0), le(?a, ?b)));

@@ -1,0 +1,43 @@
+module SodaArithmetic;
+
+sort Expr;
+sort Type;
+sort Context;
+
+constructor lit(Int): Expr;
+constructor plus(Expr, Expr): Expr;
+constructor int_type(): Type;
+constructor empty(): Context;
+
+judgment typing(Context, Expr, Type) kind typing;
+
+notation typing "$0 ⊢ $1 : $2" ascii "$0 |- $1 : $2";
+
+infer literal: ?g ⊢ lit(?n) : int_type;
+
+infer addition: ?g ⊢ plus(?a, ?b) : int_type
+    if left: (?g ⊢ ?a : int_type), right: (?g ⊢ ?b : int_type);
+
+judgment small_step(Expr, Expr) kind transition;
+
+notation small_step "$0 → $1" ascii "$0 -> $1";
+
+infer reduce_zero: plus(lit(0), ?e) → ?e;
+
+judgment big_step(Expr, Int) kind evaluation;
+
+notation big_step "$0 ⇓ $1" ascii "$0 ~> $1";
+
+infer evaluate_literal: lit(?n) ⇓ ?n;
+
+infer evaluate_addition: plus(?a, ?b) ⇓ ?result
+    if left: (?a ⇓ ?x), right: (?b ⇓ ?y) let ?result = add(?x, ?y);
+
+judgment meaning(Expr, Context, Int) kind denotation;
+
+notation meaning "⟦ $0 ⟧ $1 = $2" ascii "[[ $0 ]] $1 = $2";
+
+infer literal_meaning: ⟦ lit(?n) ⟧ ?g = ?n;
+
+infer addition_meaning: ⟦ plus(?a, ?b) ⟧ ?g = ?result
+    if left: (⟦ ?a ⟧ ?g = ?x), right: (⟦ ?b ⟧ ?g = ?y) let ?result = add(?x, ?y);

@@ -1,0 +1,53 @@
+module SodaProbability;
+import soda.math.rational;
+
+# Exact nonnegative rational weights on the finite carrier Bool.
+# Fractions are not normalised; prob_equal compares valuations extensionally.
+datatype ProbabilityValuation;
+constructor prob_weights(Rational, Rational): ProbabilityValuation;
+
+function prob_unit(Bool): ProbabilityValuation;
+function prob_zero(): ProbabilityValuation;
+function prob_scale(Rational, ProbabilityValuation): ProbabilityValuation;
+function prob_add(ProbabilityValuation, ProbabilityValuation): ProbabilityValuation;
+function prob_mix(Rational, ProbabilityValuation, ProbabilityValuation): ProbabilityValuation;
+function prob_bind(ProbabilityValuation, Fn(Bool, ProbabilityValuation)): ProbabilityValuation;
+function prob_mass(ProbabilityValuation): Rational;
+function prob_true_mass(ProbabilityValuation): Rational;
+function prob_le(ProbabilityValuation, ProbabilityValuation): Bool;
+function prob_equal(ProbabilityValuation, ProbabilityValuation): Bool;
+
+rule prob_false: prob_unit(false) => prob_weights(fraction(1, 1), fraction(0, 1));
+rule prob_true: prob_unit(true) => prob_weights(fraction(0, 1), fraction(1, 1));
+
+rule prob_divergence: prob_zero => prob_weights(fraction(0, 1), fraction(0, 1));
+
+rule prob_scaling: prob_scale(?p, prob_weights(?a, ?b)) => prob_weights(rmul(?p, ?a), rmul(?p, ?b));
+
+rule prob_addition:
+    prob_add(prob_weights(?a, ?b), prob_weights(?c, ?d))
+    => prob_weights(radd(?a, ?c), radd(?b, ?d));
+
+rule prob_choice:
+    prob_mix(?p, ?a, ?b)
+    => prob_add(prob_scale(?p, ?a), prob_scale(rcomplement(?p), ?b))
+    when probability(?p);
+
+rule prob_extension:
+    prob_bind(prob_weights(?a, ?b), ?f)
+    => prob_add(prob_scale(?a, apply(?f, false)), prob_scale(?b, apply(?f, true)));
+
+rule prob_total: prob_mass(prob_weights(?a, ?b)) => radd(?a, ?b);
+
+rule prob_event: prob_true_mass(prob_weights(?a, ?b)) => ?b;
+
+rule prob_order:
+    prob_le(prob_weights(?a, ?b), prob_weights(?c, ?d))
+    => and(rle(?a, ?c), rle(?b, ?d));
+
+rule prob_equality: prob_equal(?a, ?b) => and(prob_le(?a, ?b), prob_le(?b, ?a));
+
+monad Probability {
+    bind = prob_bind;
+    return = prob_unit;
+};

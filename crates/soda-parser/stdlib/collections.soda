@@ -1,0 +1,30 @@
+module SodaCollections;
+
+datatype IntList;
+constructor end(): IntList;
+constructor cons(Int, IntList): IntList;
+
+function list_append(IntList, IntList): IntList;
+function list_length(IntList): Int;
+function list_map(Fn(Int, Int), IntList): IntList;
+function list_fold(Fn(Int, Fn(Int, Int)), Int, IntList): Int;
+function list_member(Int, IntList): Bool;
+
+rule list_append_empty: list_append(end, ?ys) => ?ys;
+rule list_append_head: list_append(cons(?x, ?xs), ?ys) => cons(?x, list_append(?xs, ?ys));
+
+rule list_length_empty: list_length(end) => 0;
+rule list_length_head: list_length(cons(?x, ?xs)) => add(1, list_length(?xs));
+
+rule list_map_empty: list_map(?f, end) => end;
+rule list_map_head: list_map(?f, cons(?x, ?xs)) => cons(apply(?f, ?x), list_map(?f, ?xs));
+
+rule list_fold_empty: list_fold(?f, ?z, end) => ?z;
+rule list_fold_head:
+    list_fold(?f, ?z, cons(?x, ?xs))
+    => apply(apply(?f, ?x), list_fold(?f, ?z, ?xs));
+
+rule list_member_empty: list_member(?x, end) => false;
+rule list_member_head:
+    list_member(?x, cons(?y, ?ys))
+    => if eq(?x, ?y) then true else list_member(?x, ?ys);

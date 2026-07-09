@@ -1,0 +1,25 @@
+module SodaIntegerSets;
+import soda.collections;
+
+function set_range(Int): IntList;
+function set_insert(Int, IntList): IntList;
+function set_union(IntList, IntList): IntList;
+function set_subset(IntList, IntList): Bool;
+
+# Descending enumeration of [0,n); n must be nonnegative.
+rule set_range_zero: set_range(0) => [];
+rule set_range_succ: set_range(?n) => [sub(?n, 1) | set_range(sub(?n, 1))] when gt(?n, 0);
+
+rule set_insert_empty: set_insert(?n, []) => [?n];
+rule set_insert_head:
+    set_insert(?n, [?a | ?rest])
+    => if eq(?n, ?a) then [?a | ?rest] else [?a | set_insert(?n, ?rest)];
+
+# Preserve the right list's order; append missing left elements tail first.
+rule set_union_empty: set_union([], ?other) => ?other;
+rule set_union_head: set_union([?n | ?rest], ?other) => set_insert(?n, set_union(?rest, ?other));
+
+rule set_subset_empty: set_subset([], ?other) => true;
+rule set_subset_head:
+    set_subset([?n | ?rest], ?other)
+    => if list_member(?n, ?other) then set_subset(?rest, ?other) else false;

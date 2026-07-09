@@ -1,0 +1,35 @@
+module SodaNat;
+
+datatype Nat;
+constructor zero(): Nat;
+constructor succ(Nat): Nat;
+
+function nat_add(Nat, Nat): Nat;
+function nat_mul(Nat, Nat): Nat;
+function nat_to_int(Nat): Int;
+
+rule nat_add_base: nat_add(zero, ?m) => ?m;
+rule nat_add_step: nat_add(succ(?n), ?m) => succ(nat_add(?n, ?m));
+
+rule nat_mul_base: nat_mul(zero, ?m) => zero;
+rule nat_mul_step: nat_mul(succ(?n), ?m) => nat_add(?m, nat_mul(?n, ?m));
+
+rule nat_int_base: nat_to_int(zero) => 0;
+rule nat_int_step: nat_to_int(succ(?n)) => add(1, nat_to_int(?n));
+
+axiom nat_add_zero: nat_add(zero, ?m) = ?m;
+axiom nat_add_succ: nat_add(succ(?n), ?m) = succ(nat_add(?n, ?m));
+
+proof nat_left_zero: nat_add(zero, ?m) = ?m {
+    nat_add_zero with { m = ?m };
+}
+
+induction nat_right_zero on ?n: Nat: nat_add(?n, zero) = ?n {
+    case zero {
+        nat_add_zero with { m = zero };
+    }
+    case succ(k) {
+        nat_add_succ with { n = ?k, m = zero };
+        ih_k at [0] with { k = ?k };
+    }
+}

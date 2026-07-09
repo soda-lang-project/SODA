@@ -1,0 +1,35 @@
+module SodaExceptions;
+
+datatype ExceptionError;
+constructor exception_error(): ExceptionError;
+constructor exception_zero_divisor(): ExceptionError;
+
+datatype ExceptionResult;
+constructor exception_returned(Int): ExceptionResult;
+constructor exception_raised(ExceptionError): ExceptionResult;
+
+function exception_unit(Int): ExceptionResult;
+function exception_bind(ExceptionResult, Fn(Int, ExceptionResult)): ExceptionResult;
+function exception_div(Int, Int): ExceptionResult;
+function exception_catch(ExceptionResult, Fn(ExceptionError, ExceptionResult)): ExceptionResult;
+
+rule exception_return: exception_unit(?n) => exception_returned(?n);
+
+rule exception_continue: exception_bind(exception_returned(?n), ?f) => apply(?f, ?n);
+rule exception_propagate: exception_bind(exception_raised(?e), ?f) => exception_raised(?e);
+
+rule exception_divide:
+    exception_div(?a, ?b)
+    => if eq(?b, 0)
+       then exception_raised(exception_zero_divisor)
+       else exception_returned(div(?a, ?b));
+
+rule exception_catch_value:
+    exception_catch(exception_returned(?n), ?h)
+    => exception_returned(?n);
+rule exception_handle: exception_catch(exception_raised(?e), ?h) => apply(?h, ?e);
+
+monad Exceptions {
+    bind = exception_bind;
+    return = exception_unit;
+};
