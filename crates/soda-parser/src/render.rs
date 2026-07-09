@@ -9,6 +9,50 @@ pub enum NotationStyle {
     Ascii,
 }
 
+/// Groups nested notation; invalid metadata falls back to canonical applications.
+pub fn format_term_in(module: &Module, term: &Term, style: NotationStyle) -> String {
+    if style == NotationStyle::Canonical {
+        return term.to_string();
+    }
+
+    let mut parser = Parser::new("").expect("empty source lexes");
+
+    for declaration in &module.notations {
+        if parser.add_notation(module, declaration).is_err() {
+            return term.to_string();
+        }
+    }
+
+    let mut notations = Vec::new();
+
+    for declaration in &module.notations {
+        let template = match style {
+            NotationStyle::Unicode => &declaration.unicode,
+            NotationStyle::Ascii => &declaration.ascii,
+            NotationStyle::Canonical => unreachable!(),
+        };
+
+        let Some(arity) = module
+            .judgments
+            .iter()
+            .find(|j| j.name == declaration.judgment)
+            .map(|j| j.arguments.len())
+        else {
+            return term.to_string();
+        };
+
+        let Ok(compiled) =
+            crate::notation::compile_notation(&declaration.judgment, template, arity)
+        else {
+            return term.to_string();
+        };
+
+        notations.push(compiled);
+    }
+
+    Renderer { notations }.term(term, false)
+}
+
 struct Renderer {
     notations: Vec<Notation>,
 }

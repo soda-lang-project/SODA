@@ -24,7 +24,7 @@ pub use imports::{LoadError, LoadedModule, LoadedSource};
 use lexer::{Kind, Token, lex};
 pub use locations::{DeclarationKind, DeclarationLocation, Locations, ParsedModule, ParsedTerm, TermLocation};
 use notation::{Notation, Part};
-pub use render::{NotationStyle};
+pub use render::{NotationStyle, format_term_in};
 const MAX_TERM_DEPTH: usize = 256;
 struct Parser<'a> {
     source: &'a str,
