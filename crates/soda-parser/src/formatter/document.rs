@@ -9,7 +9,21 @@ pub(super) enum Doc<'a> {
     Group { width: usize, body: Box<Self> },
 }
 impl<'a> Doc<'a> {
-
+    pub fn concat(parts: Vec<Self>) -> Self {
+        Self::Concat(parts)
+    }
+    pub fn group(self) -> Self {
+        Self::Group {
+            width: self.width(),
+            body: Box::new(self),
+        }
+    }
+    pub fn nest(self) -> Self {
+        Self::Nest(Box::new(self))
+    }
+    pub fn align(self) -> Self {
+        Self::Align(Box::new(self))
+    }
     pub(super) fn width(&self) -> usize {
         match self {
             Self::Text(text) if !text.contains(['\r', '\n']) => text.chars().count(),

@@ -56,6 +56,36 @@ impl DeclarationKind {
         Self::Axiom,
         Self::Proof,
     ];
+    pub const fn is_top_level(self) -> bool {
+        !matches!(self, Self::Module | Self::Case)
+    }
+
+    pub fn from_keyword(keyword: &str) -> Option<Self> {
+        Some(match keyword {
+            "module" => Self::Module,
+            "record" => Self::Record,
+            "monad" => Self::Monad,
+            "import" => Self::Import,
+            "domain" => Self::Domain,
+            "map" => Self::Map,
+            "fixed" => Self::Fixed,
+            "induction" => Self::Induction,
+            "sort" => Self::Sort,
+            "datatype" => Self::Datatype,
+            "constructor" => Self::Constructor,
+            "function" => Self::Function,
+            "judgment" => Self::Judgment,
+            "notation" => Self::Notation,
+            "eval" => Self::Eval,
+            "query" => Self::Query,
+            "infer" => Self::Infer,
+            "rule" => Self::Rule,
+            "axiom" => Self::Axiom,
+            "proof" => Self::Proof,
+            "case" => Self::Case,
+            _ => return None,
+        })
+    }
 
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -83,6 +113,9 @@ impl DeclarationKind {
         }
     }
 
+    pub const fn is_input(self) -> bool {
+        matches!(self, Self::Eval | Self::Query)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -107,7 +140,19 @@ pub struct Locations {
 }
 
 impl Locations {
+    pub fn declaration(&self, name: &str) -> Option<&DeclarationLocation> {
+        self.declarations
+            .iter()
+            .find(|declaration| declaration.name.as_deref() == Some(name))
+    }
 
+    pub fn term(&self, term: &Term, within: Option<Span>) -> Option<Span> {
+        self.terms
+            .iter()
+            .filter(|site| within.is_none_or(|span| span.contains(site.span)) && site.term == *term)
+            .min_by_key(|site| site.span.end - site.span.start)
+            .map(|site| site.span)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -125,5 +170,57 @@ pub struct ParsedTerm {
 use crate::{Kind, Parser};
 
 impl Parser<'_> {
+    pub(super) fn record_term(&mut self, start: usize, term: &Term) {
+        if !self.track_locations {
+            return;
+        }
 
+        let span = Span::new(start, self.previous_end());
+
+        if !self
+            .locations
+            .terms
+            .iter()
+            .rev()
+            .take(RECENT_TERM_LOCATIONS)
+            .any(|site| site.span == span && site.term == *term)
+        {
+            self.locations.terms.push(TermLocation {
+                term: term.clone(),
+                span,
+            });
+        }
+    }
+
+    pub(super) fn record_declaration(&mut self, start: usize) {
+        if !self.track_locations {
+            return;
+        }
+
+        let token = &self.tokens[start];
+        let Kind::Ident(kind) = &token.kind else {
+            return;
+        };
+
+        let Some(kind) = DeclarationKind::from_keyword(kind) else {
+            return;
+        };
+
+        let next = &self.tokens[start + 1];
+        let name = if kind.is_input() {
+            None
+        } else {
+            match &next.kind {
+                Kind::Ident(name) => Some(name.clone()),
+                _ => None,
+            }
+        };
+
+        self.locations.declarations.push(DeclarationLocation {
+            kind,
+            name,
+            span: Span::new(token.offset, self.previous_end()),
+            name_span: Span::new(next.offset, next.end),
+        });
+    }
 }

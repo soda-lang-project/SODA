@@ -88,6 +88,20 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn keyword(&mut self, word: &str) -> bool {
+        self.eat(&Kind::Ident(word.into()))
+    }
+
+    fn identifier(&mut self) -> Result<String, Box<ParseError>> {
+        if let Kind::Ident(name) = self.current().kind.clone() {
+            self.cursor += 1;
+
+            Ok(name)
+        } else {
+            Err(self.expected("expected an identifier"))
+        }
+    }
+
     fn text(&mut self) -> Result<String, Box<ParseError>> {
         if let Kind::Text(text) = self.current().kind.clone() {
             self.cursor += 1;
@@ -98,5 +112,62 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn unique_name(&mut self, names: &mut BTreeSet<String>) -> Result<String, Box<ParseError>> {
+        let offset = self.current().offset;
+        let name = self.identifier()?;
+
+        if !names.insert(name.clone()) {
+            return Err(error(
+                self.source,
+                offset,
+                format!("duplicate declaration '{name}'"),
+            )
+            .with_kind(ParseErrorKind::DuplicateDeclaration(name)));
+        }
+
+        Ok(name)
+    }
+
+    fn previous_end(&self) -> usize {
+        self.tokens[self.cursor.saturating_sub(1)].end
+    }
 }
 
+pub fn parse_term(source: &str) -> Result<Term, Box<ParseError>> {
+    parse_term_in(&Module::default(), source)
+}
+
+pub fn parse_term_in(module: &Module, source: &str) -> Result<Term, Box<ParseError>> {
+    parse_term_with_locations(module, source, false).map(|parsed| parsed.term)
+}
+
+pub fn parse_term_located_in(module: &Module, source: &str) -> Result<ParsedTerm, Box<ParseError>> {
+    parse_term_with_locations(module, source, true)
+}
+
+fn parse_term_with_locations(
+    module: &Module,
+    source: &str,
+    track_locations: bool,
+) -> Result<ParsedTerm, Box<ParseError>> {
+    let mut parser = Parser::new(source)?;
+    parser.track_locations = track_locations;
+    parser.records = module.records.clone();
+    parser.monads = module.monads.clone();
+    parser.signatures = module.signatures.clone();
+
+    for notation in &module.notations {
+        parser.add_notation(module, notation)?;
+    }
+
+    let term = parser.term(0)?;
+
+    if parser.current().kind != Kind::End {
+        return Err(parser.fail("unexpected text after term"));
+    }
+
+    Ok(ParsedTerm {
+        term,
+        locations: parser.locations,
+    })
+}

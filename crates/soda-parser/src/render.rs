@@ -14,5 +14,71 @@ struct Renderer {
 }
 
 impl Renderer {
+    fn term(&self, term: &Term, nested: bool) -> String {
+        match term {
+            Term::App(name, args) => {
+                if let Some(notation) = self
+                    .notations
+                    .iter()
+                    .find(|n| n.judgment == *name && n.arity == args.len())
+                {
+                    let text = self.notated(notation, args);
 
+                    return if nested { format!("({text})") } else { text };
+                }
+
+                if args.is_empty() {
+                    return name.clone();
+                }
+
+                let arguments = args
+                    .iter()
+                    .map(|arg| self.term(arg, true))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                format!("{name}({arguments})")
+            }
+            Term::Binder {
+                parameter,
+                sort,
+                body,
+            } => format!("bind({parameter}: {sort}, {})", self.term(body, true)),
+            _ => term.to_string(),
+        }
+    }
+
+    fn notated(&self, notation: &Notation, args: &[Term]) -> String {
+        let mut pieces = Vec::new();
+        let mut literal = String::new();
+
+        for part in &notation.parts {
+            match part {
+                Part::Hole(index) => {
+                    if !literal.is_empty() {
+                        pieces.push(std::mem::take(&mut literal));
+                    }
+
+                    pieces.push(self.term(&args[*index], true));
+                }
+                Part::Literal(Kind::Symbol(ch)) => {
+                    if (*ch == '>' && literal.ends_with('='))
+                        || (*ch == '/' && literal.ends_with('/'))
+                    {
+                        literal.push(' ');
+                    }
+
+                    literal.push(*ch);
+                }
+                Part::Literal(Kind::Arrow) => literal.push_str("=>"),
+                Part::Literal(_) => unreachable!("compiled notation only contains punctuation"),
+            }
+        }
+
+        if !literal.is_empty() {
+            pieces.push(literal);
+        }
+
+        pieces.join(" ")
+    }
 }
