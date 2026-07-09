@@ -133,6 +133,22 @@ impl<'a> Parser<'a> {
     }
 }
 
+pub fn parse_module(source: &str) -> Result<Module, Box<ParseError>> {
+    Parser::new(source)?.module()
+}
+
+/// Parse with exact byte ranges for declarations, subterms, and certificate steps.
+pub fn parse_module_located(source: &str) -> Result<ParsedModule, Box<ParseError>> {
+    let mut parser = Parser::new(source)?;
+    parser.track_locations = true;
+    let module = parser.module()?;
+
+    Ok(ParsedModule {
+        module,
+        locations: parser.locations,
+    })
+}
+
 pub fn parse_term(source: &str) -> Result<Term, Box<ParseError>> {
     parse_term_in(&Module::default(), source)
 }
