@@ -64,3 +64,41 @@ fn induction_cases_use_the_same_rewrite_certificates_as_equational_proofs() {
     assert_eq!(proof.cases[1].steps[1].path, vec![0]);
 }
 
+#[test]
+fn malformed_domain_and_induction_syntax_is_rejected() {
+    for source in [
+        "domain D = unknown();",
+        "domain D = product(A);",
+        "domain D = flat(a,);",
+        "domain D = lift(A,B);",
+        "map f: D D {}",
+        "map f: D -> D { a = b; }",
+        "map f: D -> D { a => b }",
+        "fixed;",
+        "induction p ?n: N: a = b {}",
+        "induction p on n: N: a = b {}",
+        "induction p on ?n: N: a = b { nope }",
+        "induction p on ?n: N: a = b { case c(x,) {} }",
+        "induction p on ?n: N: a = b { case c { missing } }",
+        "induction p on ?n: N: a = b {} proof p: a = b {}",
+    ] {
+        assert!(
+            parse_module(&format!("module Bad; {source}")).is_err(),
+            "accepted {source}"
+        );
+    }
+
+    let deeply_nested = format!(
+        "module Deep; function f(): {}N{};",
+        "Fn(".repeat(300),
+        ")".repeat(300)
+    );
+
+    assert!(
+        parse_module(&deeply_nested)
+            .unwrap_err()
+            .message
+            .contains("nesting")
+    );
+}
+
