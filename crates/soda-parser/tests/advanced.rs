@@ -102,3 +102,26 @@ fn malformed_domain_and_induction_syntax_is_rejected() {
     );
 }
 
+#[test]
+fn named_premises_and_side_conditions_preserve_labels_without_changing_judgments() {
+    let module=parse_module("module M; infer r: p(?x) if first: q(?x), q(?x) when fresh(@y, ?x), true; infer fact: p(a) when true; infer plain: p(a) if q(a);").unwrap();
+
+    assert_eq!(module.clauses.len(), 3);
+    assert_eq!(module.clause_details.len(), 2);
+    assert_eq!(module.clause_details[0].clause, "r");
+    assert_eq!(
+        module.clause_details[0].premise_labels,
+        vec![Some("first".into()), None]
+    );
+    assert_eq!(module.clause_details[0].conditions.len(), 2);
+    assert!(module.clause_details[1].premise_labels.is_empty());
+
+    for source in [
+        "infer r: p when;",
+        "infer r: p if label:;",
+        "infer r: p when true,;",
+    ] {
+        assert!(parse_module(&format!("module M; {source}")).is_err());
+    }
+}
+
