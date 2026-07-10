@@ -4,6 +4,48 @@ mod layout;
 use crate::{ParseError, lexer::{Kind, Token, lex}};
 use document::Doc;
 
+/// Formats at 100 columns with four-space indentation, preserving comments and notation.
+pub fn format_source(source: &str) -> Result<String, Box<ParseError>> {
+    let tokens = lex(source)?;
+    let parsed = crate::parse_module_located(source).ok();
+    let items = items(source, &tokens)?;
+    let preferred = parsed
+        .as_ref()
+        .map(|parsed| conditional::rewrite(&items, &parsed.locations));
+    let document = layout::module(preferred.as_deref().unwrap_or(&items));
+    let newline = if source.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    };
+    let mut result = document::render(&document, newline);
+    let after = lex(&result)?;
+    if tokens
+        .iter()
+        .map(|t| &t.kind)
+        .ne(after.iter().map(|t| &t.kind))
+        && parsed.as_ref().is_none_or(|before| {
+            crate::parse_module(&result).map_or(true, |after| before.module != after)
+        })
+    {
+        // Keep call syntax if custom notation would change the parsed expression.
+
+        result = document::render(&layout::module(&items), newline);
+        if tokens
+            .iter()
+            .map(|t| &t.kind)
+            .ne(lex(&result)?.iter().map(|t| &t.kind))
+        {
+            return Err(crate::error::error(
+                source,
+                0,
+                "formatting would change source tokens",
+            ));
+        }
+    }
+    Ok(result)
+}
+
 #[derive(Clone, Debug)]
 struct Item<'a> {
     kind: ItemKind<'a>,

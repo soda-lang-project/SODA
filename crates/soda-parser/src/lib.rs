@@ -8,7 +8,7 @@ mod formatter;
 mod functions;
 mod imports;
 pub mod lexer;
-
+pub use formatter::format_source;
 mod locations;
 mod module;
 mod notation;
