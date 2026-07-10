@@ -1,7 +1,10 @@
 mod conditional;
 mod document;
 mod layout;
-use crate::{ParseError, lexer::{Kind, Token, lex}};
+use crate::{
+    ParseError,
+    lexer::{Kind, Token, lex},
+};
 use document::Doc;
 
 /// Formats at 100 columns with four-space indentation, preserving comments and notation.

@@ -20,9 +20,11 @@ mod symbols;
 mod terms;
 use error::error;
 pub use error::{ParseError, ParseErrorKind};
-pub use imports::{LoadError, LoadedModule, LoadedSource};
+pub use imports::{LoadError, LoadedModule, LoadedSource, load_module, load_module_source};
 use lexer::{Kind, Token, lex};
-pub use locations::{DeclarationKind, DeclarationLocation, Locations, ParsedModule, ParsedTerm, TermLocation};
+pub use locations::{
+    DeclarationKind, DeclarationLocation, Locations, ParsedModule, ParsedTerm, TermLocation,
+};
 use notation::{Notation, Part};
 pub use render::{NotationStyle, format_term_in};
 const MAX_TERM_DEPTH: usize = 256;
