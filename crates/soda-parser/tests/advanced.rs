@@ -37,3 +37,30 @@ fn domains_maps_and_fixed_points_preserve_their_structure() {
     assert_eq!(module.fixed_points, vec!["f"]);
 }
 
+#[test]
+fn induction_cases_use_the_same_rewrite_certificates_as_equational_proofs() {
+    let module = parse_module(
+        r#"
+      module Nat;
+      datatype Nat;
+      constructor zero(): Nat;
+      constructor succ(Nat): Nat;
+      function plus(Nat,Nat): Nat;
+      induction right_zero on ?n: Nat: plus(?n,zero) = ?n {
+        case zero { plus_zero; }
+        case succ(k) { plus_succ with {n=?k}; ih_k at [0]; }
+      }
+    "#,
+    )
+    .unwrap();
+    let proof = &module.inductions[0];
+
+    assert_eq!(proof.name, "right_zero");
+    assert_eq!(proof.variable, "n");
+    assert_eq!(proof.sort, "Nat");
+    assert_eq!(proof.cases[0].constructor, "zero");
+    assert_eq!(proof.cases[1].arguments, vec!["k"]);
+    assert_eq!(proof.cases[1].steps[1].axiom, "ih_k");
+    assert_eq!(proof.cases[1].steps[1].path, vec![0]);
+}
+
