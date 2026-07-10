@@ -125,3 +125,20 @@ fn named_premises_and_side_conditions_preserve_labels_without_changing_judgments
     }
 }
 
+#[test]
+fn computed_bindings_preserve_interleaved_and_trailing_order() {
+    let module = parse_module(
+        r#"
+        module Computed;
+        infer add: result(?r) if first(?x), let ?y = add(?x, 1), second(?y)
+            let ?r = mul(?y, 2);
+        infer direct: result(?r) let ?r = add(2, 3);
+    "#,
+    )
+    .unwrap();
+    assert_eq!(module.clauses[0].premises.len(), 2);
+    assert_eq!(module.clause_details[0].bindings.len(), 2);
+    assert_eq!(module.clause_details[0].bindings[0].before_premise, 1);
+    assert_eq!(module.clause_details[0].bindings[1].before_premise, 2);
+    assert_eq!(module.clause_details[1].bindings[0].before_premise, 0);
+}
