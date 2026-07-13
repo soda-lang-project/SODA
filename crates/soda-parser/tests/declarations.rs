@@ -30,3 +30,55 @@ fn binding_forms_share_one_ast_and_round_trip() {
     assert_eq!(parse_term("Γ(@ρ)").unwrap().to_string(), "Γ(@ρ)");
 }
 
+#[test]
+fn mathematical_notation_and_ascii_lower_to_identical_judgments() {
+    let module = parse_module(
+        r#"
+        module Math;
+        judgment typing(Context, Expr, Type) kind typing;
+        notation typing "$0 ⊢ $1 : $2" ascii "$0 |- $1 : $2";
+        judgment denote(Expr, Context) kind denotation;
+        notation denote "⟦ $0 ⟧ $1" ascii "[| $0 |] $1";
+        judgment hoare(Assertion, Expr, Assertion) kind hoare;
+        notation hoare "{ $0 } $1 { $2 }" ascii "{| $0 |} $1 {| $2 |}";
+        judgment step(Expr, Expr) kind transition;
+        notation step "$0 → $1" ascii "$0 -> $1";
+        judgment evals(Expr, Value) kind evaluation;
+        notation evals "$0 ⇓ $1" ascii "$0 ~> $1";
+        judgment satisfies(Model, Assertion) kind satisfaction;
+        notation satisfies "$0 ⊨ $1" ascii "$0 |= $1";
+        infer variable: Γ ⊢ @x : Nat;
+        query Γ |- @x : Nat;
+    "#,
+    )
+    .unwrap();
+
+    assert_eq!(module.clauses[0].conclusion, module.queries[0]);
+    for (unicode, ascii, plain) in [
+        ("Γ ⊢ @x : Nat", "Γ |- @x : Nat", "typing(Γ, @x, Nat)"),
+        (
+            "⟦ plus(1, 2) ⟧ ρ",
+            "[| plus(1, 2) |] ρ",
+            "denote(plus(1, 2), ρ)",
+        ),
+        (
+            "{ true } skip { true }",
+            "{| true |} skip {| true |}",
+            "hoare(true, skip, true)",
+        ),
+        ("a → b", "a -> b", "step(a,b)"),
+        ("a ⇓ 1", "a ~> 1", "evals(a,1)"),
+        ("m ⊨ true", "m |= true", "satisfies(m,true)"),
+    ] {
+        let expected = parse_term(plain).unwrap();
+
+        assert_eq!(parse_term_in(&module, unicode).unwrap(), expected);
+        assert_eq!(parse_term_in(&module, ascii).unwrap(), expected);
+    }
+
+    assert_eq!(
+        parse_term_in(&module, "(a → b) → c").unwrap(),
+        parse_term("step(step(a,b),c)").unwrap()
+    );
+}
+
