@@ -61,3 +61,16 @@ fn inference_if_and_conditional_terms_do_not_conflict() {
     assert_eq!(formatted, format_source(&formatted).unwrap());
 }
 
+#[test]
+fn related_rules_compact_without_reordering_or_losing_comments() {
+    let source = "module X; rule div_row_end: div_row(0) => 0;\n\nrule div_row_step: div_row(1) => 1;\n\n# new family\nrule div_sets_end: div_sets(0) => 0;";
+    let formatted = format_source(source).unwrap();
+    assert!(formatted.contains("=> 0;\nrule div_row_step:"));
+    assert!(formatted.contains("=> 1;\n\n# new family\nrule div_sets_end:"));
+    assert_eq!(
+        parse_module(source).unwrap(),
+        parse_module(&formatted).unwrap()
+    );
+    assert_eq!(formatted, format_source(&formatted).unwrap());
+}
+
