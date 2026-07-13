@@ -43,3 +43,21 @@ fn conditional_errors_and_nesting_are_bounded() {
     assert!(parse_term(&source).is_err());
 }
 
+#[test]
+fn inference_if_and_conditional_terms_do_not_conflict() {
+    let module =
+        parse_module("module X; infer r: p(?x) if q(?x) when if true then true else false;")
+            .unwrap();
+    assert_eq!(module.clauses.len(), 1);
+    let source = "module X; rule r: f(?c) => if(?c, if(true, 1, 2), 3);";
+    let formatted = format_source(source).unwrap();
+    assert!(formatted.contains("if ?c\n"));
+    assert!(formatted.contains("then\n"));
+    assert!(formatted.contains("if true then 1 else 2"));
+    assert_eq!(
+        parse_module(source).unwrap(),
+        parse_module(&formatted).unwrap()
+    );
+    assert_eq!(formatted, format_source(&formatted).unwrap());
+}
+
