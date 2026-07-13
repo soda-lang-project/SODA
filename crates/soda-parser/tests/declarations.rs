@@ -82,3 +82,25 @@ fn mathematical_notation_and_ascii_lower_to_identical_judgments() {
     );
 }
 
+#[test]
+fn malformed_and_ambiguous_notation_is_rejected() {
+    for declaration in [
+        "notation missing \"$0 → $1\" ascii \"$0 -> $1\";",
+        "judgment j(A,A); notation j \"$0 $1\" ascii \"$0 -> $1\";",
+        "judgment j(A,A); notation j \"$0 → $0\" ascii \"$0 -> $1\";",
+        "judgment j(A,A); notation j \"$0 → $2\" ascii \"$0 -> $1\";",
+        "judgment j(A,A); notation j \"$0 →\" ascii \"$0 -> $1\";",
+        "judgment j(A,A); notation j \"$0 → $1\" ascii \"$0 -> $1\"; judgment k(A,A); notation k \"$0 → $1\" ascii \"$0 ~> $1\";",
+        "judgment j(A); notation j \"$0\" ascii \"$0\";",
+        "judgment j(A); notation j \"$-1 →\" ascii \"$0 ->\";",
+        "judgment j(A); notation j \"$0 →\";",
+        "judgment j(A) kind unsupported;",
+        "notation j \"unterminated;",
+    ] {
+        assert!(
+            parse_module(&format!("module Bad; {declaration}")).is_err(),
+            "accepted {declaration}"
+        );
+    }
+}
+
