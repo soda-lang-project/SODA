@@ -14,3 +14,19 @@ fn declarations_preserve_sorts_kinds_and_function_sorts() {
     assert_eq!(module.judgments[1].kind, JudgmentKind::Relation);
 }
 
+#[test]
+fn binding_forms_share_one_ast_and_round_trip() {
+    let expected = Term::Binder {
+        parameter: "x".into(),
+        sort: "Expr".into(),
+        body: Box::new(Term::Name("x".into())),
+    };
+
+    for source in ["bind(x: Expr, @x)", "lambda x: Expr. @x", "λx: Expr. @x"] {
+        assert_eq!(parse_term(source).unwrap(), expected);
+    }
+
+    assert_eq!(parse_term(&expected.to_string()).unwrap(), expected);
+    assert_eq!(parse_term("Γ(@ρ)").unwrap().to_string(), "Γ(@ρ)");
+}
+
