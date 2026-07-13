@@ -29,3 +29,17 @@ fn both_conditional_spellings_have_the_same_ast() {
     }
 }
 
+#[test]
+fn conditional_errors_and_nesting_are_bounded() {
+    for source in [
+        "if true then 1",
+        "if true else 2",
+        "if true then else",
+        "if then 1 else 2",
+    ] {
+        assert!(parse_term(source).is_err(), "{source}");
+    }
+    let source = format!("{}1{}", "if true then ".repeat(260), " else 0".repeat(260));
+    assert!(parse_term(&source).is_err());
+}
+
