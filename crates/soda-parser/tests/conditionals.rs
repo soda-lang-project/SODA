@@ -74,3 +74,31 @@ fn related_rules_compact_without_reordering_or_losing_comments() {
     assert_eq!(formatted, format_source(&formatted).unwrap());
 }
 
+#[test]
+fn conditional_normalization_keeps_branch_comments() {
+    let source = "module X; eval if(true, // keep this branch comment\n1, 2);";
+    let formatted = format_source(source).unwrap();
+    assert!(formatted.contains("// keep this branch comment"));
+    assert!(!formatted.contains("if("));
+    assert_eq!(
+        parse_module(source).unwrap(),
+        parse_module(&formatted).unwrap()
+    );
+    assert_eq!(formatted, format_source(&formatted).unwrap());
+    for source in [
+        "module X; eval if(// condition\ntrue, 1, 2);",
+        "module X; eval if(true // condition\n, 1, 2);",
+        "module X; eval if true then // branch\n1 else 2;",
+        "module X; eval if true then 1 // branch\nelse 2;",
+    ] {
+        let formatted = format_source(source).unwrap();
+        assert!(!formatted.contains("if("));
+        assert!(formatted.contains("//"));
+        assert_eq!(
+            parse_module(source).unwrap(),
+            parse_module(&formatted).unwrap(),
+            "{formatted}"
+        );
+        assert_eq!(formatted, format_source(&formatted).unwrap());
+    }
+}
