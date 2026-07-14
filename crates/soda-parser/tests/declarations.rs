@@ -198,3 +198,25 @@ fn shared_notation_prefixes_select_by_later_punctuation_and_round_trip() {
     }
 }
 
+#[test]
+fn shared_notation_rejects_identical_skeletons_prefixes_and_hole_literal_overlap() {
+    for suffix in [
+        r#"judgment k(A,A,A); notation k "$2 ⊢ $0 : $1" ascii "$2 |- $0 : $1";"#,
+        r#"judgment k(A,A); notation k "$0 ⊢ $1" ascii "$0 |- $1";"#,
+        r#"judgment k(A,A,A); notation k "$0 ⊢ $1 : $2 !" ascii "$0 |- $1 : $2 !";"#,
+        r#"judgment k(A,A,A); notation k "$0 ⊢ $1 : ⟦ $2 ⟧" ascii "$0 |- $1 : [[ $2 ]]";"#,
+    ] {
+        let source = format!(
+            r#"module Bad; judgment j(A,A,A);
+            notation j "$0 ⊢ $1 : $2" ascii "$0 |- $1 : $2"; {suffix}"#
+        );
+
+        assert!(
+            parse_module(&source)
+                .unwrap_err()
+                .message
+                .contains("ambiguous")
+        );
+    }
+}
+
