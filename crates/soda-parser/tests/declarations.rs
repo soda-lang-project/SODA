@@ -104,3 +104,19 @@ fn malformed_and_ambiguous_notation_is_rejected() {
     }
 }
 
+#[test]
+fn notation_nesting_is_bounded_and_requires_grouping() {
+    let module =
+        parse_module("module M; judgment j(A,A); notation j \"$0 → $1\" ascii \"$0 -> $1\";")
+            .unwrap();
+
+    assert!(parse_term_in(&module, "a → b → c").is_err());
+    assert!(parse_term_in(&module, "a →").is_err());
+    assert!(
+        parse_term_in(&module, &format!("{}x{}", "(".repeat(300), ")".repeat(300)))
+            .unwrap_err()
+            .message
+            .contains("nesting")
+    );
+}
+
