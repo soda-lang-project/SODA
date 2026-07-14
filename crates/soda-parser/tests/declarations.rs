@@ -152,3 +152,49 @@ fn binder_headers_preserve_existing_bind_and_lambda_constructors() {
     }
 }
 
+#[test]
+fn shared_notation_prefixes_select_by_later_punctuation_and_round_trip() {
+    use soda_parser::{NotationStyle, format_term_in, parse_term_located_in};
+
+    let declarations = [
+        r#"judgment typing(C,E,T); notation typing "$0 ⊢ $1 : $2" ascii "$0 |- $1 : $2";"#,
+        r#"judgment evaluates(C,E,V); notation evaluates "$0 ⊢ $1 ⇓ $2" ascii "$0 |- $1 ~> $2";"#,
+        r#"judgment left(E,V); notation left "⟦ $1 ⟧ : $0" ascii "[[ $1 ]] : $0";"#,
+        r#"judgment right(E,V); notation right "⟦ $0 ⟧ ⇓ $1" ascii "[[ $0 ]] ~> $1";"#,
+    ];
+
+    for reversed in [false, true] {
+        let mut declarations = declarations;
+
+        if reversed {
+            declarations.reverse();
+        }
+
+        let module = parse_module(&format!("module Shared; {}", declarations.join("\n"))).unwrap();
+
+        for source in [
+            "typing(g, e, t)",
+            "evaluates(env, e, v)",
+            "left(e, v)",
+            "right(e, v)",
+            "typing(g, evaluates(env, e, v), t)",
+        ] {
+            let expected = parse_term(source).unwrap();
+
+            for style in [NotationStyle::Unicode, NotationStyle::Ascii] {
+                let printed = format_term_in(&module, &expected, style);
+                let parsed = parse_term_located_in(&module, &printed).unwrap();
+
+                assert_eq!(parsed.term, expected, "{printed}");
+                let span = parsed.locations.term(&expected, None).unwrap();
+
+                assert_eq!(&printed[span.start..span.end], printed);
+            }
+        }
+
+        for invalid in ["g ⊢ e", "g ⊢ e = t", "g |- e ~>", "⟦ e ⟧ = v"] {
+            assert!(parse_term_in(&module, invalid).is_err(), "{invalid}");
+        }
+    }
+}
+
