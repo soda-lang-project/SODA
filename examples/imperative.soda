@@ -1,0 +1,38 @@
+module Imperative;
+
+rule lookup_hit: lookup(bind(?key, ?value, ?rest), ?key) => ?value;
+rule lookup_miss:
+    lookup(bind(?key, ?value, ?rest), ?other)
+    => lookup(?rest, ?other)
+    when not(eq(?key, ?other));
+
+rule literal: value(lit(?n), ?store) => ?n;
+rule variable: value(var(?name), ?store) => lookup(?store, ?name);
+rule addition: value(plus(?a, ?b), ?store) => add(value(?a, ?store), value(?b, ?store));
+rule less_than: value(less(?a, ?b), ?store) => lt(value(?a, ?store), value(?b, ?store));
+
+rule assignment:
+    cfg(assign(?name, ?expr), ?store)
+    => cfg(skip, bind(?name, value(?expr, ?store), ?store));
+rule sequence_done: cfg(seq(skip, ?next), ?store) => cfg(?next, ?store);
+rule sequence_assign:
+    cfg(seq(assign(?name, ?expr), ?next), ?store)
+    => cfg(?next, bind(?name, value(?expr, ?store), ?store));
+rule sequence_assoc: cfg(seq(seq(?a, ?b), ?c), ?store) => cfg(seq(?a, seq(?b, ?c)), ?store);
+rule branch:
+    cfg(branch(?test, ?yes, ?no), ?store)
+    => if value(?test, ?store) then cfg(?yes, ?store) else cfg(?no, ?store);
+rule while_unroll:
+    cfg(while(?test, ?body), ?store)
+    => cfg(branch(?test, seq(?body, while(?test, ?body)), skip), ?store);
+rule sequence_branch:
+    cfg(seq(branch(?test, ?yes, ?no), ?next), ?store)
+    => if value(?test, ?store)
+       then cfg(seq(?yes, ?next), ?store)
+       else cfg(seq(?no, ?next), ?store);
+rule sequence_while:
+    cfg(seq(while(?test, ?body), ?next), ?store)
+    => cfg(seq(branch(?test, seq(?body, while(?test, ?body)), skip), ?next), ?store);
+rule finished: cfg(skip, ?store) => result(?store);
+
+eval cfg(while(less(var(x), lit(3)), assign(x, plus(var(x), lit(1)))), bind(x, 0, empty));

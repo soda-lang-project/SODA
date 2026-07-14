@@ -120,3 +120,35 @@ fn notation_nesting_is_bounded_and_requires_grouping() {
     );
 }
 
+#[test]
+fn binder_headers_preserve_existing_bind_and_lambda_constructors() {
+    let module = parse_module(include_str!("../../../examples/imperative.soda")).unwrap();
+
+    assert_eq!(module.name, "Imperative");
+    assert_eq!(
+        module.rules[0].lhs.to_string(),
+        "lookup(bind(?key, ?value, ?rest), ?key)"
+    );
+    for source in [
+        "bind(?key, ?value, ?rest)",
+        "bind(x,y,z)",
+        "bind",
+        "bind()",
+        "lambda(@x)",
+        "lambda",
+        "lambda()",
+    ] {
+        let term = parse_term(source).unwrap();
+
+        assert!(matches!(term, Term::App(..)), "{source}");
+        assert_eq!(parse_term(&term.to_string()).unwrap(), term);
+    }
+
+    for source in ["bind(x: Expr, @x)", "lambda x: Expr. @x", "λx: Expr. @x"] {
+        assert!(
+            matches!(parse_term(source).unwrap(), Term::Binder { .. }),
+            "{source}"
+        );
+    }
+}
+
