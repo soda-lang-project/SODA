@@ -256,3 +256,39 @@ fn malformed_datatype_groups_explain_the_expected_syntax() {
     );
 }
 
+#[test]
+fn typed_function_blocks_and_compact_definitions_lower_to_ordinary_rules() {
+    let old = parse_module(
+        r#"module M;
+        datatype Nat; constructor zero(): Nat; constructor succ(Nat): Nat;
+        function add(Nat, Nat): Nat;
+        rule add_zero: add(zero, ?n) => ?n;
+        rule add_succ: add(succ(?m), ?n) => succ(add(?m, ?n));
+        function positive(Int): Bool;
+        rule positive: positive(?n) => gt(?n, 0) when ge(?n, 0);
+        function apply_f(Fn(Int,Int), Int): Int;
+        rule apply_f: apply_f(?f, ?x) => apply(?f, ?x);
+        function constant(): Int; rule constant: constant => 7;
+    "#,
+    )
+    .unwrap();
+    let grouped = parse_module(
+        r#"module M;
+        datatype Nat { constructor zero(); constructor succ(Nat); }
+        function add(Nat, Nat): Nat {
+            case add_zero: (zero, ?n) => ?n;
+            case add_succ: (succ(?m), ?n) => succ(add(?m, ?n));
+        }
+        function positive(?n: Int): Bool => gt(?n, 0) when ge(?n, 0);
+        function apply_f(?f: Int -> Int, ?x: Int): Int => apply(?f, ?x);
+        function constant(): Int => 7;
+    "#,
+    )
+    .unwrap();
+    assert_eq!(old, grouped);
+    assert_eq!(
+        parse_module("module M; function f(Int): Int {}").unwrap(),
+        parse_module("module M; function f(Int): Int;").unwrap()
+    );
+}
+
