@@ -235,3 +235,24 @@ fn grouped_and_standalone_datatypes_have_identical_core_declarations() {
     );
 }
 
+#[test]
+fn malformed_datatype_groups_explain_the_expected_syntax() {
+    for source in [
+        "datatype V { function f(): V; }",
+        "datatype V { constructor x();",
+        "datatype V { constructor x() }",
+        "datatype V { datatype W; }",
+        "sort V { constructor x(); }",
+    ] {
+        assert!(
+            parse_module(&format!("module M; {source}")).is_err(),
+            "accepted {source}"
+        );
+    }
+    let error = parse_module("module M; datatype V { constructor x(): Int; }").unwrap_err();
+    assert!(
+        error.message.contains("must return enclosing datatype 'V'"),
+        "{error}"
+    );
+}
+
