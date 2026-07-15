@@ -292,3 +292,24 @@ fn typed_function_blocks_and_compact_definitions_lower_to_ordinary_rules() {
     );
 }
 
+#[test]
+fn function_blocks_mix_with_standalone_rules_and_keep_rule_order() {
+    let module = parse_module(
+        r#"module M;
+        function f(Int): Int { case first: (?x) => 1; case second: (0) => 2; };
+        rule third: f(1) => 3;
+        function g(): Int { case fourth: () => f(0); }
+    "#,
+    )
+    .unwrap();
+    assert_eq!(
+        module
+            .rules
+            .iter()
+            .map(|rule| rule.name.as_str())
+            .collect::<Vec<_>>(),
+        ["first", "second", "third", "fourth"]
+    );
+    assert_eq!(module.rules[3].lhs, parse_term("g").unwrap());
+}
+
