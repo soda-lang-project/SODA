@@ -220,3 +220,18 @@ fn shared_notation_rejects_identical_skeletons_prefixes_and_hole_literal_overlap
     }
 }
 
+#[test]
+fn grouped_and_standalone_datatypes_have_identical_core_declarations() {
+    let standalone = parse_module("module M; datatype Value; constructor values(Int, Fn(Int, Value)): Value; constructor poison(Int): Value; datatype Nat; constructor zero(): Nat; constructor succ(Nat): Nat; constructor extra(): Value;").unwrap();
+    for grouped in [
+        "module M; datatype Value { constructor values(Int, Int -> Value); constructor poison(Int); } datatype Nat { constructor zero(); constructor succ(Nat); } constructor extra(): Value;",
+        "module M; datatype Value { constructor values(Int, Fn(Int, Value)): Value; constructor poison(Int): Value; }; datatype Nat { constructor zero(): Nat; constructor succ(Nat): Nat; }; constructor extra(): Value;",
+    ] {
+        assert_eq!(parse_module(grouped).unwrap(), standalone);
+    }
+    assert_eq!(
+        parse_module("module M; datatype Empty {}").unwrap(),
+        parse_module("module M; datatype Empty;").unwrap()
+    );
+}
+
