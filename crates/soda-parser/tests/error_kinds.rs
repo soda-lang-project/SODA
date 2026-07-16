@@ -29,3 +29,17 @@ fn diagnostic_codes_and_fixes_do_not_depend_on_message_wording() {
     assert_eq!(error.diagnostic(id, source).suggestions[0].replacement, ";");
 }
 
+#[test]
+fn lexical_and_grammar_failures_keep_distinct_causes() {
+    assert!(matches!(
+        parse_term("9223372036854775808").unwrap_err().kind,
+        ParseErrorKind::IntegerRange
+    ));
+    assert!(
+        matches!(parse_module("module M; unknowable x;").unwrap_err().kind, ParseErrorKind::UnknownDeclaration(name) if name == "unknowable")
+    );
+    assert!(matches!(
+        parse_term("f(").unwrap_err().kind,
+        ParseErrorKind::ExpectedSyntax
+    ));
+}
