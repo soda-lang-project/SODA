@@ -10,6 +10,14 @@ fn formatting_preserves_comments_literals_and_is_idempotent() {
     assert_eq!(format_source(&formatted).unwrap(), formatted);
 }
 
+#[test]
+fn multiline_strings_are_opaque_and_bad_literals_are_rejected() {
+    let source = "module X;\nnotation j \"$0\n   keep this   \n$1\";\n";
+    let formatted = format_source(source).unwrap();
+    assert!(formatted.contains("\"$0\n   keep this   \n$1\""));
+    assert!(format_source("module X; notation j \"unterminated").is_err());
+}
+
 fn source_files(directory: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
     for entry in std::fs::read_dir(directory).unwrap() {
         let path = entry.unwrap().path();
