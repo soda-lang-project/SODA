@@ -29,6 +29,19 @@ fn declarations_and_inline_comments_get_distinct_lines() {
     assert_eq!(format_source(&formatted).unwrap(), formatted);
 }
 
+#[test]
+fn long_calls_break_arguments_and_indent_nested_calls() {
+    let source = "module X; eval run_program(assign(freeze(2, undef), assign(sum(2, wrapping, reg(0), reg(0)), ret(2, reg(0)))), empty);";
+    let formatted = format_source(source).unwrap();
+    assert!(
+        formatted.contains("eval run_program(\n    assign("),
+        "{formatted}"
+    );
+    assert!(formatted.contains("\n    empty\n);"), "{formatted}");
+    assert!(formatted.lines().all(|line| line.chars().count() <= 100));
+    assert_eq!(format_source(&formatted).unwrap(), formatted);
+}
+
 fn source_files(directory: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
     for entry in std::fs::read_dir(directory).unwrap() {
         let path = entry.unwrap().path();
