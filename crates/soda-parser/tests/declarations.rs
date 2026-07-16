@@ -313,3 +313,32 @@ fn function_blocks_mix_with_standalone_rules_and_keep_rule_order() {
     assert_eq!(module.rules[3].lhs, parse_term("g").unwrap());
 }
 
+#[test]
+fn invalid_function_headers_and_cases_are_rejected() {
+    for source in [
+        "function f(Int): Int => 1;",
+        "function f(?x: Int, Int): Int => ?x;",
+        "function f(?x: Int, ?x: Int): Int => ?x;",
+        "function f(?x: Int): Int;",
+        "function f(Int): Int { case wrong: () => 1; }",
+        "function f(): Int { case wrong: (1) => 1; }",
+        "function f(Int): Int { case bad: (?x) => ?x }",
+        "function f(Int): Int { rule bad: f(?x) => ?x; }",
+        "function f(Int): Int { case a: (?x) => ?x; case a: (?x) => ?x; }",
+        "rule f: f(?x) => ?x; function f(?x: Int): Int => ?x;",
+        "function f(Int): Int { case bad: (?x) => ?x;",
+    ] {
+        assert!(
+            parse_module(&format!("module Bad; {source}")).is_err(),
+            "accepted {source}"
+        );
+    }
+    let error =
+        parse_module("module Bad; function f(Int): Int { case wrong: () => 1; }").unwrap_err();
+    assert!(
+        error
+            .message
+            .contains("expects 1 argument patterns, found 0"),
+        "{error}"
+    );
+}
