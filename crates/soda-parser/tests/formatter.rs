@@ -42,6 +42,22 @@ fn long_calls_break_arguments_and_indent_nested_calls() {
     assert_eq!(format_source(&formatted).unwrap(), formatted);
 }
 
+#[test]
+fn alive2_has_wrapped_rules_correct_continuations_and_stable_layout() {
+    let source = include_str!("../../../examples/alive2-integers.soda");
+    let formatted = format_source(source).unwrap().replace("\r\n", "\n");
+    assert!(
+        formatted
+            .contains("case divide_poison_divisor:\n        (?w, ?a, poison(?w))\n        => ub;")
+    );
+    assert!(formatted.contains(";\n    case power_succ:"));
+    assert!(!formatted.contains("if("));
+    assert!(formatted.contains("\n        when width_ok(?w);"));
+    assert!(formatted.contains("}\n\nfunction "));
+    assert!(formatted.lines().all(|line| line.chars().count() <= 100));
+    assert_eq!(format_source(&formatted).unwrap(), formatted);
+}
+
 fn source_files(directory: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
     for entry in std::fs::read_dir(directory).unwrap() {
         let path = entry.unwrap().path();

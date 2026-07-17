@@ -1,0 +1,322 @@
+module Alive2Integers;
+
+import soda.collections.sets;
+
+# Executable finite integer fragment of Alive2, PLDI 2021, Figures 2--4.
+# Widths 1..8; numbers are unsigned bit patterns. Lists represent finite sets.
+datatype Value {
+    constructor values(Int, IntList);
+    constructor poison(Int);
+}
+
+datatype Operand {
+    constructor literal(Int);
+    constructor undef();
+    constructor toxic();
+    constructor reg(Int);
+}
+
+datatype Flags {
+    constructor wrapping();
+    constructor nuw();
+    constructor nsw();
+    constructor nuw_nsw();
+}
+
+datatype Instruction {
+    constructor sum(Int, Flags, Operand, Operand);
+    constructor quotient(Int, Operand, Operand);
+    constructor freeze(Int, Operand);
+    constructor select_value(Int, Operand, Operand, Operand);
+}
+
+datatype Program {
+    constructor ret(Int, Operand);
+    constructor assign(Instruction, Program);
+}
+
+datatype Env {
+    constructor empty();
+    constructor push(Value, Env);
+}
+
+datatype Outcome {
+    constructor returned(Value);
+    constructor ub();
+}
+
+datatype Outcomes {
+    constructor done();
+    constructor out(Outcome, Outcomes);
+}
+
+function width_ok(Int): Bool {
+    case widths: (?w) => and(ge(?w, 1), le(?w, 8));
+}
+
+function pow2(Int): Int {
+    case power_zero: (0) => 1;
+    case power_succ: (?n) => mul(2, pow2(sub(?n, 1))) when and(gt(?n, 0), le(?n, 8));
+}
+
+function signed(Int, Int): Int {
+    case signed_number: (?w, ?n) => if lt(?n, div(pow2(?w), 2)) then ?n else sub(?n, pow2(?w));
+}
+
+function valid_numbers(Int, IntList): Bool {
+    case valid_end: (?w, []) => true;
+    case valid_cons:
+        (?w, [?n | ?rest])
+        => if and(ge(?n, 0), lt(?n, pow2(?w)))
+           then valid_numbers(?w, ?rest)
+           else false;
+}
+
+function valid_value(Value): Bool {
+    case valid_poison: (poison(?w)) => width_ok(?w);
+    case valid_empty_set: (values(?w, [])) => false;
+    case valid_set:
+        (values(?w, [?n | ?rest]))
+        => if width_ok(?w) then valid_numbers(?w, [?n | ?rest]) else false;
+}
+
+function valid_env(Env): Bool {
+    case valid_empty_env: (empty) => true;
+    case valid_push: (push(?v, ?env)) => if valid_value(?v) then valid_env(?env) else false;
+}
+
+function lookup(Int, Env): Value {
+    case lookup_zero: (0, push(?v, ?env)) => ?v;
+    case lookup_next: (?n, push(?v, ?env)) => lookup(sub(?n, 1), ?env) when gt(?n, 0);
+}
+
+function checked(Int, Value): Value {
+    case checked_values: (?w, values(?w, ?ns)) => values(?w, ?ns);
+    case checked_poison: (?w, poison(?w)) => poison(?w);
+}
+
+function operand(Int, Operand, Env): Value {
+    case operand_literal:
+        (?w, literal(?n), ?env)
+        => values(?w, [?n])
+        when if width_ok(?w) then and(ge(?n, 0), lt(?n, pow2(?w))) else false;
+    case operand_undef: (?w, undef, ?env) => values(?w, set_range(pow2(?w))) when width_ok(?w);
+    case operand_poison: (?w, toxic, ?env) => poison(?w) when width_ok(?w);
+    case operand_reg:
+        (?w, reg(?n), ?env)
+        => checked(?w, lookup(?n, ?env))
+        when and(width_ok(?w), ge(?n, 0));
+}
+
+# Overflow is existential over the entire operand sets, as in Figure 3.
+function pair_overflow(Int, Flags, Int, Int): Bool {
+    case overflow_wrapping: (?w, wrapping, ?a, ?b) => false;
+    case overflow_nuw: (?w, nuw, ?a, ?b) => ge(add(?a, ?b), pow2(?w));
+    case overflow_nsw:
+        (?w, nsw, ?a, ?b)
+        => or(
+            lt(add(signed(?w, ?a), signed(?w, ?b)), sub(0, div(pow2(?w), 2))),
+            ge(add(signed(?w, ?a), signed(?w, ?b)), div(pow2(?w), 2))
+        );
+    case overflow_both:
+        (?w, nuw_nsw, ?a, ?b)
+        => or(pair_overflow(?w, nuw, ?a, ?b), pair_overflow(?w, nsw, ?a, ?b));
+}
+
+function row_overflow(Int, Flags, Int, IntList): Bool {
+    case row_no_overflow: (?w, ?flag, ?a, []) => false;
+    case row_overflow_step:
+        (?w, ?flag, ?a, [?b | ?bs])
+        => if pair_overflow(?w, ?flag, ?a, ?b)
+           then true
+           else row_overflow(?w, ?flag, ?a, ?bs);
+}
+
+function any_overflow(Int, Flags, IntList, IntList): Bool {
+    case no_overflow: (?w, ?flag, [], ?bs) => false;
+    case overflow_step:
+        (?w, ?flag, [?a | ?as], ?bs)
+        => if row_overflow(?w, ?flag, ?a, ?bs)
+           then true
+           else any_overflow(?w, ?flag, ?as, ?bs);
+}
+
+function add_row(Int, Int, IntList): IntList {
+    case add_row_end: (?w, ?a, []) => [];
+    case add_row_cons:
+        (?w, ?a, [?b | ?bs])
+        => set_insert(mod(add(?a, ?b), pow2(?w)), add_row(?w, ?a, ?bs));
+}
+
+function add_sets(Int, IntList, IntList): IntList {
+    case add_sets_end: (?w, [], ?bs) => [];
+    case add_sets_cons:
+        (?w, [?a | ?as], ?bs)
+        => set_union(add_row(?w, ?a, ?bs), add_sets(?w, ?as, ?bs));
+}
+
+function add_value(Int, Flags, Value, Value): Value {
+    case add_poison_left: (?w, ?flag, poison(?w), ?b) => poison(?w);
+    case add_poison_right: (?w, ?flag, values(?w, ?as), poison(?w)) => poison(?w);
+    case add_defined:
+        (?w, ?flag, values(?w, ?as), values(?w, ?bs))
+        => if any_overflow(?w, ?flag, ?as, ?bs)
+           then poison(?w)
+           else values(?w, add_sets(?w, ?as, ?bs));
+}
+
+# A poison divisor, or any possible zero divisor, causes immediate UB.
+# A poison numerator with a safe divisor only produces deferred poison.
+function div_row(Int, IntList): IntList {
+    case div_row_end: (?a, []) => [];
+    case div_row_cons: (?a, [?b | ?bs]) => set_insert(div(?a, ?b), div_row(?a, ?bs));
+}
+
+function div_sets(IntList, IntList): IntList {
+    case div_sets_end: ([], ?bs) => [];
+    case div_sets_cons: ([?a | ?as], ?bs) => set_union(div_row(?a, ?bs), div_sets(?as, ?bs));
+}
+
+function divide_value(Int, Value, Value): Outcome {
+    case divide_poison_divisor:
+        (?w, ?a, poison(?w))
+        => ub;
+    case divide_poison_numerator:
+        (?w, poison(?w), values(?w, ?bs))
+        => if list_member(0, ?bs) then ub else returned(poison(?w));
+    case divide_defined:
+        (?w, values(?w, ?as), values(?w, ?bs))
+        => if list_member(0, ?bs)
+           then ub
+           else returned(values(?w, div_sets(?as, ?bs)));
+}
+
+# Each freeze result is a separate execution, with a singleton in the register.
+function frozen(Int, IntList): Outcomes {
+    case frozen_end: (?w, []) => done;
+    case frozen_cons: (?w, [?n | ?ns]) => out(returned(values(?w, [?n])), frozen(?w, ?ns));
+}
+
+function freeze_value(Int, Value): Outcomes {
+    case freeze_poison: (?w, poison(?w)) => frozen(?w, set_range(pow2(?w)));
+    case freeze_set: (?w, values(?w, ?ns)) => frozen(?w, ?ns);
+}
+
+function join_value(Int, Value, Value): Value {
+    case join_poison_left: (?w, poison(?w), ?b) => poison(?w);
+    case join_poison_right: (?w, values(?w, ?as), poison(?w)) => poison(?w);
+    case join_sets: (?w, values(?w, ?as), values(?w, ?bs)) => values(?w, set_union(?as, ?bs));
+}
+
+function selected(Int, Value, Value, Value): Value {
+    case select_poison: (?w, poison(1), ?a, ?b) => poison(?w);
+    case select_set:
+        (?w, values(1, ?cs), ?a, ?b)
+        => if list_member(1, ?cs)
+           then
+               if list_member(0, ?cs) then join_value(?w, ?a, ?b) else ?a
+           else ?b;
+}
+
+function instruction(Instruction, Env): Outcomes {
+    case instruction_add:
+        (sum(?w, ?flag, ?a, ?b), ?env)
+        => out(returned(add_value(?w, ?flag, operand(?w, ?a, ?env), operand(?w, ?b, ?env))), done)
+        when width_ok(?w);
+    case instruction_div:
+        (quotient(?w, ?a, ?b), ?env)
+        => out(divide_value(?w, operand(?w, ?a, ?env), operand(?w, ?b, ?env)), done)
+        when width_ok(?w);
+    case instruction_freeze:
+        (freeze(?w, ?a), ?env)
+        => freeze_value(?w, operand(?w, ?a, ?env))
+        when width_ok(?w);
+    case instruction_select:
+        (select_value(?w, ?c, ?a, ?b), ?env)
+        => out(
+            returned(
+                selected(?w, operand(1, ?c, ?env), operand(?w, ?a, ?env), operand(?w, ?b, ?env))
+            ),
+            done
+        )
+        when width_ok(?w);
+}
+
+function append(Outcomes, Outcomes): Outcomes {
+    case append_done: (done, ?ys) => ?ys;
+    case append_out: (out(?x, ?xs), ?ys) => out(?x, append(?xs, ?ys));
+}
+
+function continue(Outcomes, Program, Env): Outcomes {
+    case continue_done: (done, ?p, ?env) => done;
+    case continue_ub: (out(ub, ?rest), ?p, ?env) => out(ub, continue(?rest, ?p, ?env));
+    case continue_returned:
+        (out(returned(?v), ?rest), ?p, ?env)
+        => append(execute(?p, push(?v, ?env)), continue(?rest, ?p, ?env));
+}
+
+function execute(Program, Env): Outcomes {
+    case execute_ret:
+        (ret(?w, ?a), ?env)
+        => out(returned(operand(?w, ?a, ?env)), done)
+        when width_ok(?w);
+    case execute_assign: (assign(?i, ?p), ?env) => continue(instruction(?i, ?env), ?p, ?env);
+}
+
+function run_program(Program, Env): Outcomes {
+    case run_checked: (?p, ?env) => execute(?p, ?env) when valid_env(?env);
+}
+
+# Direction: refines(source behaviours, target behaviours). Every target outcome
+# must be covered by a source outcome. UB covers anything; poison covers values.
+function value_refines(Value, Value): Bool {
+    case refine_poison: (poison(?w), poison(?w)) => true;
+    case refine_poison_value: (poison(?w), values(?w, ?ns)) => true;
+    case refine_value_poison: (values(?w, ?ns), poison(?w)) => false;
+    case refine_sets: (values(?w, ?as), values(?w, ?bs)) => set_subset(?bs, ?as);
+}
+
+function outcome_refines(Outcome, Outcome): Bool {
+    case refine_ub: (ub, ?target) => true;
+    case forbid_new_ub: (returned(?v), ub) => false;
+    case refine_returned: (returned(?a), returned(?b)) => value_refines(?a, ?b);
+}
+
+function covered(Outcomes, Outcome): Bool {
+    case uncovered: (done, ?target) => false;
+    case covered_out:
+        (out(?source, ?rest), ?target)
+        => if outcome_refines(?source, ?target)
+           then true
+           else covered(?rest, ?target);
+}
+
+function refines(Outcomes, Outcomes): Bool {
+    case refine_done: (?source, done) => true;
+    case refine_out:
+        (?source, out(?target, ?rest))
+        => if covered(?source, ?target) then refines(?source, ?rest) else false;
+}
+
+eval instruction(sum(2, wrapping, literal(3), literal(1)), empty);
+eval instruction(sum(2, nuw, literal(3), literal(1)), empty);
+eval instruction(quotient(2, literal(1), literal(0)), empty);
+
+eval run_program(
+    assign(sum(2, wrapping, reg(0), reg(0)), ret(2, reg(0))),
+    push(values(2, [3, 2, 1, 0]), empty)
+);
+
+eval run_program(
+    assign(freeze(2, undef), assign(sum(2, wrapping, reg(0), reg(0)), ret(2, reg(0)))),
+    empty
+);
+
+eval refines(
+    instruction(sum(2, nuw, literal(3), literal(1)), empty),
+    instruction(sum(2, wrapping, literal(3), literal(1)), empty)
+);
+eval refines(
+    instruction(sum(2, wrapping, literal(3), literal(1)), empty),
+    instruction(sum(2, nuw, literal(3), literal(1)), empty)
+);
