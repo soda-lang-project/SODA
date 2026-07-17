@@ -58,6 +58,65 @@ fn alive2_has_wrapped_rules_correct_continuations_and_stable_layout() {
     assert_eq!(format_source(&formatted).unwrap(), formatted);
 }
 
+#[test]
+fn every_example_and_library_preserves_tokens_linked_ast_and_comments() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    for directory in [
+        root.join("examples"),
+        root.join("crates/soda-parser/stdlib"),
+    ] {
+        let mut files = Vec::new();
+        source_files(&directory, &mut files);
+        for path in files {
+            let source = std::fs::read_to_string(&path).unwrap();
+            let formatted =
+                format_source(&source).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+            assert_eq!(
+                format_source(&formatted).unwrap(),
+                formatted,
+                "{}",
+                path.display()
+            );
+            let before = lex(&source)
+                .unwrap()
+                .into_iter()
+                .map(|t| t.kind)
+                .collect::<Vec<_>>();
+            let after = lex(&formatted)
+                .unwrap()
+                .into_iter()
+                .map(|t| t.kind)
+                .collect::<Vec<_>>();
+            if before != after {
+                assert_eq!(
+                    soda_parser::parse_module(&source).unwrap(),
+                    soda_parser::parse_module(&formatted).unwrap(),
+                    "{}",
+                    path.display()
+                );
+            }
+            let name = path.to_str().unwrap();
+            let before = load_module_source(name, &source, path.parent().unwrap()).unwrap();
+            let after = load_module_source(name, &formatted, path.parent().unwrap()).unwrap();
+            assert_eq!(before.module, after.module, "{}", path.display());
+            let comments = |text: &str| {
+                text.lines()
+                    .filter_map(|line| {
+                        let start = line.find("//").or_else(|| line.find('#'))?;
+                        Some(line[start..].trim_end().to_owned())
+                    })
+                    .collect::<Vec<_>>()
+            };
+            assert_eq!(
+                comments(&source),
+                comments(&formatted),
+                "{}",
+                path.display()
+            );
+        }
+    }
+}
+
 fn source_files(directory: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
     for entry in std::fs::read_dir(directory).unwrap() {
         let path = entry.unwrap().path();
