@@ -133,3 +133,16 @@ fn source_files(directory: &std::path::Path, files: &mut Vec<std::path::PathBuf>
     }
 }
 
+#[test]
+fn grouped_datatypes_format_independently_and_keep_their_ast() {
+    let source = "module M; datatype V{constructor v(Int);constructor empty();} datatype N{constructor zero();constructor succ(N);}; constructor extra():V; eval v(1);";
+    let formatted = soda_parser::format_source(source).unwrap();
+    assert_eq!(
+        soda_parser::parse_module(source).unwrap(),
+        soda_parser::parse_module(&formatted).unwrap()
+    );
+    assert_eq!(soda_parser::format_source(&formatted).unwrap(), formatted);
+    assert!(formatted.contains("    constructor v(Int);"), "{formatted}");
+    assert!(formatted.contains("}\n\ndatatype N"), "{formatted}");
+}
+
