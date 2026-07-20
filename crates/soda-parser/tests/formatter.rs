@@ -146,3 +146,20 @@ fn grouped_datatypes_format_independently_and_keep_their_ast() {
     assert!(formatted.contains("}\n\ndatatype N"), "{formatted}");
 }
 
+#[test]
+fn typed_function_bodies_format_without_changing_definitions_or_comments() {
+    let source = "module M; domain D = flat(a); map id: D -> D { bottom => bottom; a => a; } function f(Int):Int{# cases\ncase base:(0)=>1;case step:(?x)=>f(sub(?x,1)) when gt(?x,0);} function positive(?x:Int):Bool=>gt(?x,0); eval f(2);";
+    let formatted = soda_parser::format_source(source).unwrap();
+    assert_eq!(
+        soda_parser::parse_module(source).unwrap(),
+        soda_parser::parse_module(&formatted).unwrap()
+    );
+    assert_eq!(soda_parser::format_source(&formatted).unwrap(), formatted);
+    assert!(
+        formatted.contains("    case base: (0) => 1;"),
+        "{formatted}"
+    );
+    assert!(formatted.contains("}\n\nfunction positive"), "{formatted}");
+    assert!(formatted.contains("# cases"));
+    assert!(formatted.contains("}\n\nfunction f"), "{formatted}");
+}
