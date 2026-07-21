@@ -108,3 +108,43 @@ fn relative_and_dotted_imports_resolve_from_each_importing_file() {
     assert!(loaded.sources[1].name.ends_with("wrapper.soda"));
 }
 
+#[test]
+fn diamonds_and_repeated_imports_deduplicate_shared_definitions() {
+    let workspace = Workspace::new();
+    workspace.write(
+        "shared.soda",
+        "module Shared; rule shared: shared => 1; eval 100; query ignored;",
+    );
+    workspace.write(
+        "left.soda",
+        "module Left; import shared; rule left: left => shared;",
+    );
+    workspace.write(
+        "right.soda",
+        "module Right; import shared; rule right: right => shared;",
+    );
+    workspace.write(
+        "root.soda",
+        "module Root; import left; import right; import shared; eval 7; query root_query;",
+    );
+    let loaded = workspace.load("root.soda");
+    assert_eq!(loaded.sources.len(), 4);
+    assert_eq!(
+        loaded
+            .module
+            .rules
+            .iter()
+            .filter(|r| r.name == "shared")
+            .count(),
+        1
+    );
+    assert_eq!(loaded.module.rules.len(), 3);
+    assert_eq!(loaded.module.evaluations, vec![Term::Int(7)]);
+    assert_eq!(
+        loaded.module.queries,
+        vec![parse_term("root_query").unwrap()]
+    );
+    assert_eq!(loaded.root, 3);
+    assert!(loaded.module.imports.is_empty());
+}
+
