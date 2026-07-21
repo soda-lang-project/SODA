@@ -200,3 +200,15 @@ fn imported_records_monads_and_notations_are_available_while_parsing_root() {
     assert_eq!(loaded.module.notations.len(), 1);
 }
 
+#[test]
+fn cycle_errors_identify_import_chain_and_source() {
+    let workspace = Workspace::new();
+    workspace.write("a.soda", "module A; import b;");
+    workspace.write("b.soda", "module B; import a;");
+    let error = load_module(workspace.0.join("a.soda")).unwrap_err();
+    assert!(error.message.contains("cyclic imports"), "{error:?}");
+    assert!(error.message.contains("a.soda") && error.message.contains("b.soda"));
+    assert!(error.source.ends_with("a.soda"));
+    assert_eq!(error.text.as_deref(), Some("module A; import b;"));
+}
+
