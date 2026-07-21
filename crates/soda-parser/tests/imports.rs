@@ -236,3 +236,14 @@ fn missing_import_and_dependency_parse_errors_retain_the_right_source() {
     assert!(broken.parse.is_some(), "{broken:?}");
 }
 
+#[test]
+fn duplicate_definition_names_across_modules_are_rejected() {
+    let workspace = Workspace::new();
+    workspace.write("a.soda", "module A; rule collision: a => 1;");
+    workspace.write("b.soda", "module B; rule collision: b => 2;");
+    workspace.write("root.soda", "module Root; import a; import b;");
+    let error = load_module(workspace.0.join("root.soda")).unwrap_err();
+    assert!(error.message.contains("collision"), "{error:?}");
+    assert!(error.message.contains("duplicate"), "{error:?}");
+}
+
