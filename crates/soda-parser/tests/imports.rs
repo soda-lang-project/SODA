@@ -212,3 +212,27 @@ fn cycle_errors_identify_import_chain_and_source() {
     assert_eq!(error.text.as_deref(), Some("module A; import b;"));
 }
 
+#[test]
+fn missing_import_and_dependency_parse_errors_retain_the_right_source() {
+    let workspace = Workspace::new();
+    let root = workspace.write("root.soda", "module Root; import missing;");
+    let missing = load_module(&root).unwrap_err();
+    assert!(missing.message.contains("cannot import `missing`"));
+    assert_eq!(Path::new(&missing.source), root);
+    let span = missing.span.unwrap();
+    assert_eq!(
+        &missing.text.unwrap()[span.start..span.end],
+        "import missing;"
+    );
+
+    workspace.write("broken.soda", "module Broken; rule invalid: =>;");
+    workspace.write("root.soda", "module Root; import broken;");
+    let broken = load_module(&root).unwrap_err();
+    assert!(broken.source.ends_with("broken.soda"));
+    assert_eq!(
+        broken.text.as_deref(),
+        Some("module Broken; rule invalid: =>;")
+    );
+    assert!(broken.parse.is_some(), "{broken:?}");
+}
+
