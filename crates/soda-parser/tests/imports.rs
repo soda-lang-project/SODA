@@ -247,3 +247,18 @@ fn duplicate_definition_names_across_modules_are_rejected() {
     assert!(error.message.contains("duplicate"), "{error:?}");
 }
 
+#[test]
+fn imported_and_local_definition_names_cannot_shadow_each_other() {
+    let workspace = Workspace::new();
+    workspace.write("dependency.soda", "module Dependency; rule shared: a => 1;");
+    workspace.write(
+        "root.soda",
+        "module Root; import dependency; rule shared: b => 2;",
+    );
+    let error = load_module(workspace.0.join("root.soda")).unwrap_err();
+    assert!(error.source.ends_with("root.soda"));
+    assert!(error.message.contains("shared"), "{error:?}");
+    assert!(error.message.contains("duplicate"), "{error:?}");
+    assert!(error.parse.is_some(), "{error:?}");
+}
+
