@@ -148,3 +148,21 @@ fn diamonds_and_repeated_imports_deduplicate_shared_definitions() {
     assert!(loaded.module.imports.is_empty());
 }
 
+#[test]
+fn root_source_strings_use_explicit_base_for_local_imports() {
+    let workspace = Workspace::new();
+    workspace.write("support.soda", "module Support; rule answer: answer => 42;");
+    let loaded = load_module_source(
+        "<stdin>",
+        "module Stdin; import support; eval answer;",
+        &workspace.0,
+    )
+    .unwrap();
+    assert_eq!(loaded.module.name, "Stdin");
+    assert_eq!(loaded.module.rules.len(), 1);
+    assert_eq!(
+        loaded.sources[loaded.root].text,
+        "module Stdin; import support; eval answer;"
+    );
+}
+
