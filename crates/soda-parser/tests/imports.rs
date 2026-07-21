@@ -54,3 +54,34 @@ fn imports_are_header_directives_and_do_not_confuse_constructor_names_in_notatio
     assert!(late.message.contains("before local declarations"), "{late}");
 }
 
+#[test]
+fn every_standard_library_is_bundled_and_independent_of_working_directory() {
+    let workspace = Workspace::new();
+    for (name, symbol) in [
+        ("soda.effects.state", "state_bind"),
+        ("soda.effects.exceptions", "exception_bind"),
+        ("soda.probability", "prob_bind"),
+        ("soda.collections", "list_map"),
+        ("soda.collections.sets", "set_union"),
+        ("soda.languages.arithmetic", "lit"),
+        ("soda.data.nat", "nat_add"),
+        ("soda.math.rational", "radd"),
+        ("soda.prelude", "nat_mul"),
+    ] {
+        let loaded = load_module_source(
+            "<stdin>",
+            &format!("module Root; import {name};"),
+            &workspace.0,
+        )
+        .unwrap();
+        assert!(loaded.module.signatures.iter().any(|s| s.name == symbol));
+        assert!(
+            loaded
+                .sources
+                .iter()
+                .any(|source| source.name == format!("<{name}>"))
+        );
+        assert_eq!(loaded.sources[loaded.root].name, "<stdin>");
+    }
+}
+
