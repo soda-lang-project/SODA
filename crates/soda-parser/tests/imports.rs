@@ -85,3 +85,26 @@ fn every_standard_library_is_bundled_and_independent_of_working_directory() {
     }
 }
 
+#[test]
+fn relative_and_dotted_imports_resolve_from_each_importing_file() {
+    let workspace = Workspace::new();
+    workspace.write("lib/value.soda", "module Value; rule value: value => 9;");
+    workspace.write(
+        "lib/wrapper.soda",
+        "module Wrapper; import value; rule wrapper: wrapper => value;",
+    );
+    workspace.write(
+        "root.soda",
+        "module Root; import lib.wrapper; import \"lib/value.soda\"; eval wrapper;",
+    );
+    let loaded = workspace.load("root.soda");
+    assert_eq!(loaded.module.rules.len(), 2);
+    assert_eq!(
+        loaded.module.evaluations,
+        vec![parse_term("wrapper").unwrap()]
+    );
+    assert_eq!(loaded.sources.len(), 3);
+    assert!(loaded.sources[0].name.ends_with("value.soda"));
+    assert!(loaded.sources[1].name.ends_with("wrapper.soda"));
+}
+
