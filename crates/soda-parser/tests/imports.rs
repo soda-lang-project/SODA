@@ -166,3 +166,37 @@ fn root_source_strings_use_explicit_base_for_local_imports() {
     );
 }
 
+#[test]
+fn imported_records_monads_and_notations_are_available_while_parsing_root() {
+    let workspace = Workspace::new();
+    workspace.write(
+        "prelude.soda",
+        r#"module Prelude;
+        record Store = store {value: Int, valid: Bool};
+        sort Computation;
+        function unit(Int): Computation;
+        function chain(Computation, Int -> Computation): Computation;
+        monad M {bind = chain; return = unit;};
+        judgment reduces(Int, Int);
+        notation reduces "$0 → $1" ascii "$0 -> $1";
+    "#,
+    );
+    workspace.write("root.soda", "module Root; import prelude; eval store {valid: true, value: 8}; eval do M { x <- unit(1); return x; }; query 1 → 2;");
+    let loaded = workspace.load("root.soda");
+    assert_eq!(
+        loaded.module.evaluations[0],
+        parse_term("store(8, true)").unwrap()
+    );
+    assert_eq!(
+        loaded.module.evaluations[1],
+        parse_term("chain(unit(1), bind(x: Int, unit(@x)))").unwrap()
+    );
+    assert_eq!(
+        loaded.module.queries,
+        vec![parse_term("reduces(1, 2)").unwrap()]
+    );
+    assert_eq!(loaded.module.records.len(), 1);
+    assert_eq!(loaded.module.monads.len(), 1);
+    assert_eq!(loaded.module.notations.len(), 1);
+}
+
