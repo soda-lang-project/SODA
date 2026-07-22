@@ -273,3 +273,36 @@ fn root_file_read_errors_have_no_invented_source_text() {
     assert!(error.span.is_none());
 }
 
+#[test]
+fn prelude_and_explicit_transitive_imports_share_one_copy_of_each_definition() {
+    let workspace = Workspace::new();
+    let loaded = load_module_source(
+        "<stdin>",
+        r#"module Root;
+        import soda.prelude;
+        import soda.math.rational;
+        import soda.probability;
+        import soda.data.nat;
+        import soda.collections.sets;
+        eval nat_to_int(nat_add(succ(zero), succ(zero)));
+    "#,
+        &workspace.0,
+    )
+    .unwrap();
+    assert_eq!(loaded.sources.len(), 9);
+    for symbol in ["fraction", "nat_add", "prob_bind", "state_bind", "list_map"] {
+        assert_eq!(
+            loaded
+                .module
+                .signatures
+                .iter()
+                .filter(|s| s.name == symbol)
+                .count(),
+            1,
+            "{symbol}"
+        );
+    }
+    assert_eq!(loaded.module.inductions.len(), 1);
+    assert_eq!(loaded.module.evaluations.len(), 1);
+}
+
