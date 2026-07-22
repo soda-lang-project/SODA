@@ -334,3 +334,24 @@ fn imported_grouped_constructors_work_with_local_standalone_declarations() {
     assert!(source.locations.declaration("value").is_some());
 }
 
+#[test]
+fn imported_function_bodies_link_with_local_definitions() {
+    let workspace = Workspace::new();
+    workspace.write("helper.soda", "module Helper; function bump(?x: Int): Int => add(?x, 1); function twice(Int): Int { case twice_value: (?x) => mul(?x, 2); }");
+    workspace.write("root.soda", "module Root; import helper; function combined(?x: Int): Int => twice(bump(?x)); eval combined(2);");
+    let loaded = workspace.load("root.soda");
+    assert_eq!(loaded.module.rules.len(), 3);
+    assert_eq!(loaded.module.rules[0].name, "bump");
+    assert_eq!(loaded.module.rules[1].name, "twice_value");
+    assert!(
+        loaded.sources[0]
+            .locations
+            .declaration("twice_value")
+            .is_some()
+    );
+    workspace.write(
+        "conflict.soda",
+        "module Conflict; import helper; rule bump: local => 3;",
+    );
+    assert!(load_module(workspace.0.join("conflict.soda")).is_err());
+}
