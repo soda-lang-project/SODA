@@ -24,3 +24,19 @@ fn exact_subterm_and_declaration_ranges_survive_comments_crlf_and_unicode() {
     assert_eq!(span.start, text.rfind("true").unwrap());
 }
 
+#[test]
+fn notation_ranges_point_to_the_original_math_and_not_its_lowered_text() {
+    let module = parse_module(
+        "module N; judgment step(Expr,Expr); notation step \"$0 → $1\" ascii \"$0 -> $1\";",
+    )
+    .unwrap();
+    let text = "a → f(false)";
+    let parsed = parse_term_located_in(&module, text).unwrap();
+    let whole = parsed.locations.term(&parsed.term, None).unwrap();
+
+    assert_eq!(&text[whole.start..whole.end], text);
+    let argument = parsed.locations.term(&Term::Bool(false), None).unwrap();
+
+    assert_eq!(&text[argument.start..argument.end], "false");
+}
+
