@@ -306,3 +306,31 @@ fn prelude_and_explicit_transitive_imports_share_one_copy_of_each_definition() {
     assert_eq!(loaded.module.evaluations.len(), 1);
 }
 
+#[test]
+fn imported_grouped_constructors_work_with_local_standalone_declarations() {
+    let workspace = Workspace::new();
+    workspace.write(
+        "values.soda",
+        "module Values; datatype V { constructor value(Int); }",
+    );
+    workspace.write(
+        "root.soda",
+        "module Root; import values; constructor empty(): V; eval value(3);",
+    );
+    let loaded = workspace.load("root.soda");
+    assert_eq!(loaded.module.signatures.len(), 2);
+    assert!(
+        loaded
+            .module
+            .signatures
+            .iter()
+            .all(|signature| signature.result == "V")
+    );
+    assert_eq!(
+        loaded.module.evaluations,
+        vec![parse_term("value(3)").unwrap()]
+    );
+    let source = &loaded.sources[0];
+    assert!(source.locations.declaration("value").is_some());
+}
+
