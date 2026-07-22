@@ -262,3 +262,14 @@ fn imported_and_local_definition_names_cannot_shadow_each_other() {
     assert!(error.parse.is_some(), "{error:?}");
 }
 
+#[test]
+fn root_file_read_errors_have_no_invented_source_text() {
+    let workspace = Workspace::new();
+    let path = workspace.0.join("missing-root.soda");
+    let error = load_module(&path).unwrap_err();
+    assert_eq!(Path::new(&error.source), path);
+    assert!(error.text.is_none());
+    assert!(error.parse.is_none());
+    assert!(error.span.is_none());
+}
+
