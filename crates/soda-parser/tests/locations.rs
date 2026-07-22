@@ -40,3 +40,23 @@ fn notation_ranges_point_to_the_original_math_and_not_its_lowered_text() {
     assert_eq!(&text[argument.start..argument.end], "false");
 }
 
+#[test]
+fn induction_cases_and_proof_steps_have_their_own_ranges() {
+    let text = "module P; induction p on ?n: Nat: f(?n) = ?n { case zero { base; } case succ(k) { ih_k with {k=?k}; } }";
+    let parsed = parse_module_located(text).unwrap();
+    let site = parsed
+        .locations
+        .declarations
+        .iter()
+        .find(|site| {
+            site.kind == soda_parser::DeclarationKind::Case && site.name.as_deref() == Some("succ")
+        })
+        .unwrap();
+
+    assert!(text[site.span.start..site.span.end].starts_with("case succ(k)"));
+    assert_eq!(
+        &text[parsed.locations.steps[1].start..parsed.locations.steps[1].end],
+        "ih_k with {k=?k};"
+    );
+}
+
