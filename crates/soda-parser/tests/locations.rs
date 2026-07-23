@@ -77,3 +77,17 @@ fn missing_semicolon_suggests_a_real_parseable_edit() {
     assert!(fixed.contains("?x;\neval"));
 }
 
+#[test]
+fn grouped_constructors_retain_their_own_declaration_locations() {
+    let source = "module M; datatype Value { constructor value(Int); constructor poison(); }";
+    let parsed = parse_module_located(source).unwrap();
+    for name in ["value", "poison"] {
+        let site = parsed.locations.declaration(name).unwrap();
+        assert_eq!(site.kind, soda_parser::DeclarationKind::Constructor);
+        assert_eq!(&source[site.name_span.start..site.name_span.end], name);
+        assert!(source[site.span.start..site.span.end].starts_with("constructor "));
+    }
+    let site = parsed.locations.declaration("Value").unwrap();
+    assert!(source[site.span.start..site.span.end].ends_with('}'));
+}
+
