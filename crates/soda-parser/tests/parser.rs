@@ -33,3 +33,19 @@ fn parses_complete_semantics_and_certificate() {
     assert_eq!(proof.steps[0].substitution["x"], Term::Int(2));
 }
 
+#[test]
+fn literals_and_zero_arity_constructors() {
+    for (source, expected) in [
+        ("-9223372036854775808", Term::Int(i64::MIN)),
+        ("9223372036854775807", Term::Int(i64::MAX)),
+        ("+123", Term::Int(123)),
+        ("true", Term::Bool(true)),
+        ("false", Term::Bool(false)),
+        ("nil()", Term::app("nil", vec![])),
+        ("nil", Term::app("nil", vec![])),
+        ("?value_2", Term::Var("value_2".into())),
+    ] {
+        assert_eq!(parse_term(source).unwrap(), expected, "{source}");
+    }
+}
+
