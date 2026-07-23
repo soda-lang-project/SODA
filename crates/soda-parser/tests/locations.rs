@@ -60,3 +60,20 @@ fn induction_cases_and_proof_steps_have_their_own_ranges() {
     );
 }
 
+#[test]
+fn missing_semicolon_suggests_a_real_parseable_edit() {
+    let text = "module P; rule id: id(?x) => ?x\neval id(1);";
+    let error = parse_module(text).unwrap_err();
+    let diagnostic = error.diagnostic(0, text);
+    let suggestion = diagnostic.suggestions.first().unwrap();
+    let fixed = format!(
+        "{}{}{}",
+        &text[..suggestion.span.start],
+        suggestion.replacement,
+        &text[suggestion.span.end..]
+    );
+
+    assert!(parse_module(&fixed).is_ok(), "{fixed}");
+    assert!(fixed.contains("?x;\neval"));
+}
+
