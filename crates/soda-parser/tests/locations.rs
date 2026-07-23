@@ -91,3 +91,22 @@ fn grouped_constructors_retain_their_own_declaration_locations() {
     assert!(source[site.span.start..site.span.end].ends_with('}'));
 }
 
+#[test]
+fn function_cases_have_rule_locations_and_compact_definitions_have_function_locations() {
+    let source = "module M; function f(Int): Int { case wrong: (?x) => false; } function g(?n: Int): Int => ?n;";
+    let parsed = parse_module_located(source).unwrap();
+    let case = parsed.locations.declaration("wrong").unwrap();
+    assert_eq!(case.kind, soda_parser::DeclarationKind::Rule);
+    assert_eq!(&source[case.name_span.start..case.name_span.end], "wrong");
+    assert_eq!(
+        &source[case.span.start..case.span.end],
+        "case wrong: (?x) => false;"
+    );
+    let term = parsed
+        .locations
+        .term(&Term::Bool(false), Some(case.span))
+        .unwrap();
+    assert_eq!(&source[term.start..term.end], "false");
+    let compact = parsed.locations.declaration("g").unwrap();
+    assert_eq!(compact.kind, soda_parser::DeclarationKind::Function);
+}
