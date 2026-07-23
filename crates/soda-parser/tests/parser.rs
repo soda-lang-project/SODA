@@ -49,3 +49,10 @@ fn literals_and_zero_arity_constructors() {
     }
 }
 
+#[test]
+fn terms_round_trip_through_display() {
+    let term = parse_term("state(pair(?x, -3), true, nil())").unwrap();
+
+    assert_eq!(parse_term(&term.to_string()).unwrap(), term);
+}
+
