@@ -120,3 +120,16 @@ fn errors_include_exact_source_positions() {
     assert_eq!((unicode_error.line, unicode_error.column), (2, 2));
 }
 
+#[test]
+fn proof_defaults_and_empty_certificates() {
+    let module =
+        parse_module("module M; proof p: a = a {} proof q: a = b { ax reverse; }").unwrap();
+
+    assert!(module.proofs[0].steps.is_empty());
+    let step = &module.proofs[1].steps[0];
+
+    assert!(step.reverse);
+    assert!(step.path.is_empty());
+    assert!(step.substitution.is_empty());
+}
+
