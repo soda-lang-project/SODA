@@ -99,3 +99,11 @@ fn rejects_malformed_modules() {
     }
 }
 
+#[test]
+fn rejects_duplicate_named_declarations() {
+    let error = parse_module("module A; rule r: a => b; axiom r: a = b;").unwrap_err();
+
+    assert_eq!(error.message, "duplicate declaration 'r'");
+    assert_eq!(error.column, 33);
+}
+
