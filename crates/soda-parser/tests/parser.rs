@@ -107,3 +107,16 @@ fn rejects_duplicate_named_declarations() {
     assert_eq!(error.column, 33);
 }
 
+#[test]
+fn errors_include_exact_source_positions() {
+    let source = "module A;\n  eval f(1, );";
+    let error = parse_module(source).unwrap_err();
+
+    assert_eq!((error.line, error.column), (2, 13));
+    assert_eq!(&source[error.offset..], ");");
+    assert!(error.to_string().starts_with("2:13:"));
+    let unicode_error = parse_term("# αβ\n %").unwrap_err();
+
+    assert_eq!((unicode_error.line, unicode_error.column), (2, 2));
+}
+
