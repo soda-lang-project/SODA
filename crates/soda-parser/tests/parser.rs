@@ -56,3 +56,25 @@ fn terms_round_trip_through_display() {
     assert_eq!(parse_term(&term.to_string()).unwrap(), term);
 }
 
+#[test]
+fn rejects_bad_terms_without_panics() {
+    for source in [
+        "",
+        "?",
+        "f(",
+        "f(a,)",
+        "f(a b)",
+        "f(a))",
+        "1 2",
+        "true()",
+        "-",
+        "+",
+        "🦀",
+        "9223372036854775808",
+        "-9223372036854775809",
+        "a => b",
+    ] {
+        assert!(parse_term(source).is_err(), "accepted {source:?}");
+    }
+}
+
