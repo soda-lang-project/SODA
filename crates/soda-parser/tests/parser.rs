@@ -78,3 +78,24 @@ fn rejects_bad_terms_without_panics() {
     }
 }
 
+#[test]
+fn rejects_malformed_modules() {
+    for source in [
+        "",
+        "module A",
+        "module A; nonsense hi;",
+        "module A; rule r: a = b;",
+        "module A; axiom r: a => b;",
+        "module A; eval f(a,);",
+        "module A; proof p: a = b { ax at [-1]; }",
+        "module A; proof p: a = b { ax at [+1]; }",
+        "module A; proof p: a = b { ax at [999999999999999999999999999999]; }",
+        "module A; proof p: a = b { ax at [0,]; }",
+        "module A; proof p: a = b { ax with {x = 1, x = 2}; }",
+        "module A; proof p: a = b { ax;",
+        "module A; proof p: a = b { ax }",
+    ] {
+        assert!(parse_module(source).is_err(), "accepted {source:?}");
+    }
+}
+
