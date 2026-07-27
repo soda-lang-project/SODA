@@ -133,3 +133,10 @@ fn proof_defaults_and_empty_certificates() {
     assert!(step.substitution.is_empty());
 }
 
+#[test]
+fn excessive_nesting_is_a_diagnostic() {
+    let source = format!("{}x{}", "f(".repeat(300), ")".repeat(300));
+
+    assert!(parse_term(&source).unwrap_err().message.contains("nesting"));
+}
+
