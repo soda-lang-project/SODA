@@ -140,3 +140,13 @@ fn excessive_nesting_is_a_diagnostic() {
     assert!(parse_term(&source).unwrap_err().message.contains("nesting"));
 }
 
+#[test]
+fn comments_and_windows_line_endings() {
+    let module = parse_module("// intro\r\nmodule M; # header\r\neval f(1, true); // end").unwrap();
+
+    assert_eq!(
+        module.evaluations,
+        vec![Term::app("f", vec![Term::Int(1), Term::Bool(true)])]
+    );
+}
+
