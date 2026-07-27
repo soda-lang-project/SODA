@@ -166,3 +166,15 @@ fn inference_facts_rules_and_queries() {
     );
 }
 
+#[test]
+fn rejects_malformed_and_duplicate_inference_declarations() {
+    for source in [
+        "module R; infer missing: p if;",
+        "module R; infer trailing: p if q,;",
+        "module R; infer duplicate: p; axiom duplicate: a = b;",
+        "module R; query;",
+        "module R; infer missing: p if q",
+    ] {
+        assert!(parse_module(source).is_err(), "accepted {source:?}");
+    }
+}
