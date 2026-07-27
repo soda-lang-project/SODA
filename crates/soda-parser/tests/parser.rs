@@ -150,3 +150,19 @@ fn comments_and_windows_line_endings() {
     );
 }
 
+#[test]
+fn inference_facts_rules_and_queries() {
+    let module = parse_module("module R; infer zero: nat(z); infer successor: nat(s(?n)) if nat(?n), valid(?n); query nat(s(z)); query relation(?x, ?y);").unwrap();
+
+    assert_eq!(module.clauses.len(), 2);
+    assert!(module.clauses[0].premises.is_empty());
+    assert_eq!(module.clauses[1].name, "successor");
+    assert_eq!(module.clauses[1].premises.len(), 2);
+    assert_eq!(module.clauses[1].conclusion.to_string(), "nat(s(?n))");
+    assert_eq!(module.queries[0].to_string(), "nat(s(z))");
+    assert_eq!(
+        module.queries[1].variables(),
+        ["x".into(), "y".into()].into()
+    );
+}
+
