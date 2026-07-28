@@ -65,3 +65,44 @@ fn notation_styles_round_trip_nested_judgments_constructors_and_binders() {
     );
 }
 
+#[test]
+fn templates_support_zero_arguments_and_multidigit_reordered_holes() {
+    let mut module =
+        parse_module("module M; judgment unit(); notation unit \"◇\" ascii \"<>\";").unwrap();
+    let order = [11, 1, 10, 0, 2, 3, 4, 5, 6, 7, 8, 9];
+    let holes = order
+        .iter()
+        .map(|index| format!("${index}"))
+        .collect::<Vec<_>>()
+        .join(" : ");
+    module.judgments.push(JudgmentDecl {
+        name: "many".into(),
+        arguments: vec!["A".into(); 12],
+        kind: JudgmentKind::Relation,
+    });
+    module.notations.push(NotationDecl {
+        judgment: "many".into(),
+        unicode: format!("⟨ {holes} ⟩"),
+        ascii: format!("[ {holes} ]"),
+    });
+    for term in [
+        Term::app("unit", vec![]),
+        Term::app("many", (0..12).map(Term::Int).collect()),
+    ] {
+        for style in [NotationStyle::Unicode, NotationStyle::Ascii] {
+            let text = format_term_in(&module, &term, style);
+
+            assert_eq!(parse_term_in(&module, &text).unwrap(), term, "{text}");
+        }
+    }
+
+    assert!(
+        format_term_in(
+            &module,
+            &Term::app("many", (0..12).map(Term::Int).collect()),
+            NotationStyle::Unicode
+        )
+        .starts_with("⟨ 11 : 1 : 10 : 0")
+    );
+}
+
