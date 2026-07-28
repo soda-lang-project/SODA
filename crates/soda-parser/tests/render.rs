@@ -106,3 +106,65 @@ fn templates_support_zero_arguments_and_multidigit_reordered_holes() {
     );
 }
 
+#[test]
+fn invalid_programmatic_metadata_falls_back_without_panicking() {
+    let term = Term::app("j", vec![Term::Int(1)]);
+
+    for template in [
+        "",
+        "$",
+        "$999999999999999999999999999",
+        "$1 →",
+        "$0 $0",
+        "$0",
+        "\"",
+        "$0 # comment",
+    ] {
+        let module = Module {
+            judgments: vec![JudgmentDecl {
+                name: "j".into(),
+                arguments: vec!["A".into()],
+                kind: JudgmentKind::Relation,
+            }],
+            notations: vec![NotationDecl {
+                judgment: "j".into(),
+                unicode: template.into(),
+                ascii: template.into(),
+            }],
+            ..Module::default()
+        };
+
+        assert_eq!(
+            format_term_in(&module, &term, NotationStyle::Unicode),
+            term.to_string()
+        );
+    }
+
+    let mut missing = Module::default();
+    missing.notations.push(NotationDecl {
+        judgment: "j".into(),
+        unicode: "$0 →".into(),
+        ascii: "$0 ->".into(),
+    });
+
+    assert_eq!(
+        format_term_in(&missing, &term, NotationStyle::Ascii),
+        term.to_string()
+    );
+    let mut ambiguous = notation_module();
+    ambiguous.notations.push(NotationDecl {
+        judgment: "evals".into(),
+        unicode: "$0 → $1".into(),
+        ascii: "$0 -> $1".into(),
+    });
+
+    assert_eq!(
+        format_term_in(&ambiguous, &term, NotationStyle::Ascii),
+        term.to_string()
+    );
+    assert_eq!(
+        format_term_in(&notation_module(), &term, NotationStyle::Canonical),
+        term.to_string()
+    );
+}
+
