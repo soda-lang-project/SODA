@@ -15,3 +15,20 @@ fn multiline_branches_align_and_nested_branches_have_their_own_block() {
     );
 }
 
+#[test]
+fn argument_comments_stay_with_arguments_and_comment_paragraphs_survive() {
+    let source =
+        "module X;\n# first paragraph\n\n# second paragraph\neval f(1, // first argument\n2);";
+    let formatted = format_source(source).unwrap();
+    assert!(formatted.contains("# first paragraph\n\n# second paragraph"));
+    assert!(
+        formatted.contains("1, // first argument\n    2"),
+        "{formatted}"
+    );
+    assert_eq!(
+        parse_module(source).unwrap(),
+        parse_module(&formatted).unwrap()
+    );
+    assert_eq!(formatted, format_source(&formatted).unwrap());
+}
+
