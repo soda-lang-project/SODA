@@ -57,3 +57,52 @@ fn distinct_subjects_get_separate_families_even_with_similar_rule_names() {
     assert!(formatted.contains("valid_one: a(1) => true;\n\nrule valid_other"));
 }
 
+#[test]
+fn generated_nested_expressions_preserve_ast_width_and_idempotence() {
+    fn term(seed: &mut u64, depth: usize) -> soda_ast::Term {
+        use soda_ast::Term;
+        *seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+        let choice = *seed >> 32;
+        if depth == 0 {
+            return if choice.is_multiple_of(2) {
+                Term::Int((choice % 100) as i64)
+            } else {
+                Term::Bool(choice.is_multiple_of(3))
+            };
+        }
+        match choice % 5 {
+            0 => Term::app(
+                "if",
+                vec![
+                    term(seed, depth - 1),
+                    term(seed, depth - 1),
+                    term(seed, depth - 1),
+                ],
+            ),
+            1 => Term::app("pair", vec![term(seed, depth - 1), term(seed, depth - 1)]),
+            2 => Term::app("add", vec![term(seed, depth - 1), term(seed, depth - 1)]),
+            3 => Term::Binder {
+                parameter: "x".into(),
+                sort: "Int".into(),
+                body: Box::new(term(seed, depth - 1)),
+            },
+            _ => Term::app("node", vec![term(seed, depth - 1)]),
+        }
+    }
+    let mut seed = 17;
+    for case in 0..256 {
+        let source = format!("module X; eval {};", term(&mut seed, 4));
+        let formatted =
+            format_source(&source).unwrap_or_else(|error| panic!("case {case}: {error}"));
+        assert_eq!(
+            parse_module(&source).unwrap(),
+            parse_module(&formatted).unwrap(),
+            "case {case}"
+        );
+        assert_eq!(formatted, format_source(&formatted).unwrap(), "case {case}");
+        assert!(
+            formatted.lines().all(|line| line.chars().count() <= 100),
+            "case {case}:\n{formatted}"
+        );
+    }
+}
