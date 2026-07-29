@@ -168,3 +168,14 @@ fn invalid_programmatic_metadata_falls_back_without_panicking() {
     );
 }
 
+#[test]
+fn literal_runs_preserve_lexer_boundaries_between_punctuation() {
+    let module = parse_module(
+        "module M; judgment j(A,A); notation j \"$0 / / = > $1\" ascii \"$0 / / = > $1\";",
+    )
+    .unwrap();
+    let term = Term::app("j", vec![Term::Int(1), Term::Int(-1)]);
+    let output = format_term_in(&module, &term, NotationStyle::Ascii);
+
+    assert_eq!(parse_term_in(&module, &output).unwrap(), term, "{output}");
+}
