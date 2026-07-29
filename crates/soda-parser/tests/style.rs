@@ -32,3 +32,20 @@ fn argument_comments_stay_with_arguments_and_comment_paragraphs_survive() {
     assert_eq!(formatted, format_source(&formatted).unwrap());
 }
 
+#[test]
+fn mathematical_colons_are_spaced_and_binder_colons_stay_attached() {
+    let source = "module X; sort C; sort E; sort T; constructor empty(): C; constructor e(): E; constructor t(): T; judgment typing(C, E, T) kind typing; notation typing \"$0 ⊢ $1 : $2\" ascii \"$0 |- $1 : $2\"; infer fact: empty ⊢ e:t; query empty |- e:t; eval lambda x:Int.@x;";
+    let formatted = format_source(source).unwrap();
+    assert!(
+        formatted.contains("infer fact: empty ⊢ e : t;"),
+        "{formatted}"
+    );
+    assert!(formatted.contains("query empty |- e : t;"), "{formatted}");
+    assert!(formatted.contains("lambda x: Int. @x"));
+    assert_eq!(
+        parse_module(source).unwrap(),
+        parse_module(&formatted).unwrap()
+    );
+    assert_eq!(formatted, format_source(&formatted).unwrap());
+}
+
