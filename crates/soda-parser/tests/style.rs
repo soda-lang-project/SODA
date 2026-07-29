@@ -49,3 +49,11 @@ fn mathematical_colons_are_spaced_and_binder_colons_stay_attached() {
     assert_eq!(formatted, format_source(&formatted).unwrap());
 }
 
+#[test]
+fn distinct_subjects_get_separate_families_even_with_similar_rule_names() {
+    let source = "module X; rule valid_zero: a(0) => true; rule valid_one: a(1) => true; rule valid_other: b(0) => true;";
+    let formatted = format_source(source).unwrap();
+    assert!(formatted.contains("valid_zero: a(0) => true;\nrule valid_one"));
+    assert!(formatted.contains("valid_one: a(1) => true;\n\nrule valid_other"));
+}
+
