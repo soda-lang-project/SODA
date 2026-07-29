@@ -28,3 +28,15 @@ fn do_blocks_infer_binding_sorts_and_scope_bare_names() {
     assert_eq!(parse_term_in(&module, "x").unwrap(), Term::app("x", vec![]));
 }
 
+#[test]
+fn nested_blocks_preserve_outer_scope_and_allow_shadowing() {
+    let module = parse_module(PRELUDE).unwrap();
+    let term = parse_term_in(
+        &module,
+        "do State { x <- unit(1); y <- do State { x <- unit(x); return x; }; return add(x,y); }",
+    )
+    .unwrap();
+    let expected = parse_term_in(&module, "chain(unit(1), bind(x:Int, chain(chain(unit(@x), bind(x:Int, unit(@x))), bind(y:Int, unit(add(@x,@y))))))").unwrap();
+    assert_eq!(term, expected);
+}
+
