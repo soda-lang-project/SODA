@@ -80,3 +80,13 @@ fn do_reports_unknown_instances_bad_types_and_incomplete_blocks() {
     );
 }
 
+#[test]
+fn arrow_types_are_right_associative_and_parentheses_change_grouping() {
+    let module = parse_module("module Arrows; function f(Int -> Bool -> Int, (Int -> Bool) -> Int): Int -> (Bool -> Int);").unwrap();
+    assert_eq!(
+        module.signatures[0].arguments,
+        ["Fn(Int,Fn(Bool,Int))", "Fn(Fn(Int,Bool),Int)"]
+    );
+    assert_eq!(module.signatures[0].result, "Fn(Int,Fn(Bool,Int))");
+}
+
