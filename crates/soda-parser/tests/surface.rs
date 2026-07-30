@@ -55,3 +55,28 @@ fn ignored_effect_binding_avoids_names_in_source() {
     assert!(body.free_names().contains("__soda_do_3"));
 }
 
+#[test]
+fn do_reports_unknown_instances_bad_types_and_incomplete_blocks() {
+    let module = parse_module(PRELUDE).unwrap();
+    for (source, message) in [
+        ("do Missing { return 1; }", "unknown monad instance"),
+        ("do State { x: Bool <- unit(1); return 2; }", "binds Int"),
+        ("do State { x <- unit(1); }", "final computation"),
+        ("do State { }", "final computation"),
+    ] {
+        assert!(
+            parse_term_in(&module, source)
+                .unwrap_err()
+                .to_string()
+                .contains(message)
+        );
+    }
+    let invalid = "module Bad; sort M; function u(Int):M; function b(M, Bool -> M):M; monad X {bind=b;return=u;};";
+    assert!(
+        parse_module(invalid)
+            .unwrap_err()
+            .to_string()
+            .contains("incompatible")
+    );
+}
+
