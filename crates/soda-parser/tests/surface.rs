@@ -90,3 +90,20 @@ fn arrow_types_are_right_associative_and_parentheses_change_grouping() {
     assert_eq!(module.signatures[0].result, "Fn(Int,Fn(Bool,Int))");
 }
 
+#[test]
+fn lists_support_empty_nested_and_pattern_tails() {
+    let module = parse_module(
+        "module Lists; eval []; eval [1,[2],3]; rule head: first([?x | ?tail]) => ?x;",
+    )
+    .unwrap();
+    assert_eq!(module.evaluations[0], Term::app("end", vec![]));
+    assert_eq!(
+        module.evaluations[1],
+        parse_term_in(&module, "cons(1,cons(cons(2,end),cons(3,end)))").unwrap()
+    );
+    assert_eq!(
+        module.rules[0].lhs,
+        parse_term_in(&module, "first(cons(?x,?tail))").unwrap()
+    );
+}
+
