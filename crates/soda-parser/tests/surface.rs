@@ -40,3 +40,18 @@ fn nested_blocks_preserve_outer_scope_and_allow_shadowing() {
     assert_eq!(term, expected);
 }
 
+#[test]
+fn ignored_effect_binding_avoids_names_in_source() {
+    let module = parse_module(PRELUDE).unwrap();
+    let term = parse_term_in(&module, "do State { unit(1); return @__soda_do_3; }").unwrap();
+    let Term::App(_, args) = term else { panic!() };
+    let Term::Binder {
+        parameter, body, ..
+    } = &args[1]
+    else {
+        panic!()
+    };
+    assert_ne!(parameter, "__soda_do_3");
+    assert!(body.free_names().contains("__soda_do_3"));
+}
+
