@@ -39,3 +39,21 @@ fn tex_commands_are_aliases_for_declared_notation_and_keep_source_spans() {
     assert!(parse_term(r"a \rightarrow b").is_err());
 }
 
+#[test]
+fn tex_lambda_and_bottom_use_existing_base_terms() {
+    assert_eq!(
+        parse_term(r"\lambda x: Expr. @x").unwrap(),
+        parse_term("bind(x: Expr, @x)").unwrap()
+    );
+    assert_eq!(parse_term(r"\bot").unwrap(), parse_term("bottom").unwrap());
+
+    for source in [
+        r"\lambdax: Expr. @x",
+        r"\bottom",
+        r"\unknown",
+        r"\Lambda x: Expr. @x",
+    ] {
+        assert!(parse_term(source).is_err(), "{source}");
+    }
+}
+
