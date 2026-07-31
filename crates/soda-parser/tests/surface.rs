@@ -107,3 +107,25 @@ fn lists_support_empty_nested_and_pattern_tails() {
     );
 }
 
+#[test]
+fn records_reorder_fields_in_values_patterns_and_interactive_terms() {
+    let source = "module Records; record Store = store { value: Int, valid: Bool }; eval store {valid: true, value: 7}; rule read: read(store {valid: true, value: ?x}) => ?x;";
+    let parsed = parse_module_located(source).unwrap();
+    let module = &parsed.module;
+    assert_eq!(module.signatures[0].arguments, ["Int", "Bool"]);
+    assert!(module.sorts[0].inductive);
+    assert_eq!(
+        module.evaluations[0],
+        Term::app("store", vec![Term::Int(7), Term::Bool(true)])
+    );
+    assert_eq!(
+        parse_term_in(module, "store {value: 7, valid: true}").unwrap(),
+        module.evaluations[0]
+    );
+    assert!(parsed.locations.declaration("Store").is_some());
+    assert_eq!(
+        module.rules[0].lhs,
+        parse_term_in(module, "read(store(?x,true))").unwrap()
+    );
+}
+
