@@ -129,3 +129,29 @@ fn records_reorder_fields_in_values_patterns_and_interactive_terms() {
     );
 }
 
+#[test]
+fn record_diagnostics_identify_missing_duplicate_and_unknown_fields() {
+    let module =
+        parse_module("module Records; record Store = store { value: Int, valid: Bool };").unwrap();
+    for (source, message) in [
+        ("store {value:1}", "missing field 'valid'"),
+        (
+            "store {value:1,value:2,valid:true}",
+            "duplicate field 'value'",
+        ),
+        ("store {other:1}", "unknown field 'other'"),
+    ] {
+        assert!(
+            parse_term_in(&module, source)
+                .unwrap_err()
+                .to_string()
+                .contains(message)
+        );
+    }
+    assert!(
+        parse_module("module X; record S = s {x:Int,x:Int};")
+            .unwrap_err()
+            .to_string()
+            .contains("duplicate record field")
+    );
+}
