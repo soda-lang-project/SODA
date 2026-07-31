@@ -57,3 +57,31 @@ fn tex_lambda_and_bottom_use_existing_base_terms() {
     }
 }
 
+#[test]
+fn commands_do_not_rewrite_strings_comments_or_identifiers() {
+    let source = r#"module Safe;
+        judgment j(E,E);
+        notation j "$0 → $1" ascii "$0 -> $1";
+        // \lambda malformed text and \llbracket
+        # \bot is ignored here
+        eval lambda_name;
+        eval j(vdash, llbracket);
+    "#;
+    let parsed = parse_module_located(source).unwrap();
+
+    assert_eq!(parsed.module.notations[0].unicode, "$0 → $1");
+    assert_eq!(
+        parsed.module.evaluations[0],
+        parse_term("lambda_name").unwrap()
+    );
+    assert_eq!(
+        parsed.module.evaluations[1],
+        parse_term("j(vdash,llbracket)").unwrap()
+    );
+    // String escapes are decoded before TeX notation commands.
+
+    let escaped = parse_module(r#"module M; judgment j(E); notation j "\\llbracket $0 \\rrbracket" ascii "[| $0 |]"; eval \llbracket 1 \rrbracket;"#).unwrap();
+
+    assert_eq!(escaped.notations[0].unicode, r"\llbracket $0 \rrbracket");
+    assert_eq!(escaped.evaluations[0], parse_term("j(1)").unwrap());
+}
