@@ -91,6 +91,41 @@ impl<'a> Scope<'a> {
         }
     }
 
+    pub fn materialize(&self, ty: &Type) -> Result<Sort, SortError> {
+        match self.resolve(ty) {
+            Type::Named(name) => Ok(Sort::Named(name)),
+            Type::Function(input, output) => Ok(Sort::Function(
+                Box::new(self.materialize(&input)?),
+                Box::new(self.materialize(&output)?),
+            )),
+            Type::Variable(_) => Err(SortError::new(
+                "ambiguous sort; constrain variables with a declared signature".into(),
+            )),
+        }
+    }
+
+    pub fn finish(&self) -> Result<(), SortError> {
+        for (name, ty) in &self.variables {
+            self.materialize(ty)
+                .map_err(|error| error.at(&Term::Var(name.clone())))?;
+        }
+
+        Ok(())
+    }
+
+    pub fn variable_sorts(&self) -> Result<BTreeMap<String, Sort>, SortError> {
+        self.variables
+            .iter()
+            .map(|(name, ty)| {
+                Ok((
+                    name.clone(),
+                    self.materialize(ty)
+                        .map_err(|error| error.at(&Term::Var(name.clone())))?,
+                ))
+            })
+            .collect()
+    }
+
     pub fn expected(&mut self, term: &Term, sort: &Sort) -> Result<(), SortError> {
         let actual = self.term(term)?;
 

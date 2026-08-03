@@ -12,3 +12,6 @@ pub use sort::Sort;
 use validation::bindings_require_sort_check;
 pub use validation::{TypeReport, requires_sort_check};
 
+pub fn check_term(module: &Module, term: &Term) -> Result<Sort, SortError> {
+    TypeChecker::new(module)?.check_term(term)
+}

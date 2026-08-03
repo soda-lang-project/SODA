@@ -135,6 +135,114 @@ impl TypeChecker {
         Ok(checker)
     }
 
+    pub fn check_term(&self, term: &Term) -> Result<Sort, SortError> {
+        let mut scope = Scope::new(self);
+        let ty = scope.term(term)?;
+        scope.finish()?;
+
+        scope.materialize(&ty)
+    }
+
+    pub fn check_judgment(&self, term: &Term) -> Result<(), SortError> {
+        let mut scope = Scope::new(self);
+        scope.judgment(term)?;
+
+        scope.finish()
+    }
+
+    /// Check related goals in a shared runtime metavariable context.
+    pub fn check_judgments(&self, terms: &[Term]) -> Result<(), SortError> {
+        if !self.typed && !terms.iter().any(crate::requires_sort_check) {
+            return Ok(());
+        }
+
+        let mut scope = Scope::new(self);
+
+        for term in terms {
+            scope.judgment(term)?;
+        }
+
+        scope.finish()
+    }
+
+    /// Checks a clause instance against its universally quantified variable sorts.
+    pub fn check_clause_instantiation(
+        &self,
+        clause: &Clause,
+        substitution: &Substitution,
+        conditions: &[Term],
+    ) -> Result<(), SortError> {
+        self.check_clause_instantiation_with_bindings(clause, substitution, conditions, &[])
+    }
+
+    pub fn check_clause_instantiation_with_bindings(
+        &self,
+        clause: &Clause,
+        substitution: &Substitution,
+        conditions: &[Term],
+        bindings: &[soda_ast::ComputedBinding],
+    ) -> Result<(), SortError> {
+        if !self.typed
+            && !bindings.iter().any(|binding| {
+                crate::requires_sort_check(&binding.pattern)
+                    || crate::requires_sort_check(&binding.value)
+            })
+            && !substitution.values().any(crate::requires_sort_check)
+            && !crate::requires_sort_check(&clause.conclusion)
+            && !clause
+                .premises
+                .iter()
+                .chain(conditions)
+                .any(crate::requires_sort_check)
+        {
+            return Ok(());
+        }
+
+        let mut template = Scope::new(self);
+        template.judgment(&clause.conclusion)?;
+        for premise in &clause.premises {
+            template.judgment(premise)?;
+        }
+
+        for condition in conditions {
+            template.boolean(condition)?;
+        }
+
+        for binding in bindings {
+            template.equation(&binding.pattern, &binding.value)?;
+        }
+        let expected = template.variable_sorts()?;
+
+        if expected.len() != substitution.len() || expected.keys().ne(substitution.keys()) {
+            return Err(SortError::new(
+                "clause substitution must bind exactly its metavariables".into(),
+            ));
+        }
+
+        let mut instance = Scope::new(self);
+
+        for (name, sort) in expected {
+            instance.expected(&substitution[&name], &sort)?;
+        }
+
+        instance.judgment(&clause.conclusion.substitute(substitution))?;
+        for premise in &clause.premises {
+            instance.judgment(&premise.substitute(substitution))?;
+        }
+
+        for condition in conditions {
+            instance.boolean(&condition.substitute(substitution))?;
+        }
+
+        for binding in bindings {
+            instance.equation(
+                &binding.pattern.substitute(substitution),
+                &binding.value.substitute(substitution),
+            )?;
+        }
+        instance.finish()
+    }
+
 }
 
 fn register(symbols: &mut BTreeSet<String>, name: &str) -> Result<(), SortError> {
