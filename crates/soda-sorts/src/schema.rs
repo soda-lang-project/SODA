@@ -243,6 +243,52 @@ impl TypeChecker {
         instance.finish()
     }
 
+    pub fn check_equation(&self, lhs: &Term, rhs: &Term) -> Result<(), SortError> {
+        let mut scope = Scope::new(self);
+        scope.equation(lhs, rhs)?;
+
+        scope.finish()
+    }
+
+    pub fn check_equation_with_variable_sort(
+        &self,
+        lhs: &Term,
+        rhs: &Term,
+        variable: &str,
+        sort: &str,
+    ) -> Result<(), SortError> {
+        let mut scope = Scope::new(self);
+        scope.expected(&Term::Var(variable.into()), &self.parse_sort(sort)?)?;
+        scope.equation(lhs, rhs)?;
+
+        scope.finish()
+    }
+
+    /// Keeps axiom variables separate from metavariables in replacement terms.
+    pub fn check_instantiation(
+        &self,
+        lhs: &Term,
+        rhs: &Term,
+        substitution: &Substitution,
+    ) -> Result<(), SortError> {
+        let mut template = Scope::new(self);
+        template.equation(lhs, rhs)?;
+        let expected = template.variable_sorts()?;
+
+        if expected.len() != substitution.len() || expected.keys().ne(substitution.keys()) {
+            return Err(SortError::new(
+                "axiom substitution must bind exactly its metavariables".into(),
+            ));
+        }
+
+        let mut replacements = Scope::new(self);
+
+        for (name, sort) in expected {
+            replacements.expected(&substitution[&name], &sort)?;
+        }
+
+        replacements.finish()
+    }
 }
 
 fn register(symbols: &mut BTreeSet<String>, name: &str) -> Result<(), SortError> {
