@@ -135,6 +135,10 @@ impl TypeChecker {
         Ok(checker)
     }
 
+    pub fn is_typed(&self) -> bool {
+        self.typed
+    }
+
     pub fn check_term(&self, term: &Term) -> Result<Sort, SortError> {
         let mut scope = Scope::new(self);
         let ty = scope.term(term)?;

@@ -70,3 +70,114 @@ pub struct TypeReport {
     pub checked_declarations: usize,
 }
 
+/// Shares constraints within each definition, keeping quantified definitions separate.
+pub fn validate_module(module: &Module) -> Result<TypeReport, SortError> {
+    validate_module_all(module).map_err(|errors| {
+        errors
+            .into_iter()
+            .next()
+            .expect("a failed validation has an error")
+    })
+}
+
+pub fn validate_module_all(module: &Module) -> Result<TypeReport, Vec<SortError>> {
+    let checker = TypeChecker::new(module).map_err(|error| vec![error])?;
+    let mut report = TypeReport {
+        typed: checker.is_typed(),
+        checked_declarations: 0,
+    };
+
+    if !report.typed {
+        return Ok(report);
+    }
+
+    let mut errors = Vec::new();
+    let mut record = |name: &str, result: Result<(), SortError>| {
+        report.checked_declarations += 1;
+
+        if let Err(error) = result {
+            errors.push(error.in_declaration(name));
+        }
+    };
+
+    for rule in &module.rules {
+        let result = (|| {
+            if let Term::App(name, _) = &rule.lhs
+                && checker.inductive_constructors.contains(name)
+            {
+                return Err(SortError::new(format!(
+                    "rewrite rule `{}` cannot redefine inductive constructor `{name}`",
+                    rule.name
+                ))
+                .at(&rule.lhs));
+            }
+
+            let mut scope = inference::Scope::new(&checker);
+            scope.equation(&rule.lhs, &rule.rhs)?;
+            if let Some(condition) = &rule.condition {
+                scope.boolean(condition)?;
+            }
+
+            scope.finish()
+        })();
+        record(&rule.name, result);
+    }
+
+    for equation in &module.equations {
+        record(
+            &equation.name,
+            checker.check_equation(&equation.lhs, &equation.rhs),
+        );
+    }
+
+    let mut equations = module.equations.clone();
+
+    for proof in &module.proofs {
+        record(&proof.name, proofs::check(&checker, &equations, proof));
+        equations.push(Equation {
+            name: proof.name.clone(),
+            lhs: proof.lhs.clone(),
+            rhs: proof.rhs.clone(),
+        });
+    }
+
+    for clause in &module.clauses {
+        let result = (|| {
+            let mut scope = inference::Scope::new(&checker);
+            scope.judgment(&clause.conclusion)?;
+            for premise in &clause.premises {
+                scope.judgment(premise)?;
+            }
+
+            for detail in module
+                .clause_details
+                .iter()
+                .filter(|detail| detail.clause == clause.name)
+            {
+                for binding in &detail.bindings {
+                    scope.equation(&binding.pattern, &binding.value)?;
+                }
+                for condition in &detail.conditions {
+                    scope.boolean(condition)?;
+                }
+            }
+
+            scope.finish()
+        })();
+        record(&clause.name, result);
+    }
+
+    for term in &module.evaluations {
+        record("", checker.check_term(term).map(|_| ()));
+    }
+
+    for query in &module.queries {
+        record("", checker.check_judgment(query));
+    }
+
+    if errors.is_empty() {
+        Ok(report)
+    } else {
+        Err(errors)
+    }
+}

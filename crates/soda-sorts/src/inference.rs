@@ -133,6 +133,39 @@ impl<'a> Scope<'a> {
             .map_err(|error| error.at(term))
     }
 
+    pub fn enter_position(&mut self, term: &Term, path: &[usize]) -> Result<(), SortError> {
+        let Some((index, rest)) = path.split_first() else {
+            return Ok(());
+        };
+
+        match term {
+            Term::App(_, args) => {
+                let child = args
+                    .get(*index)
+                    .ok_or_else(|| SortError::new("invalid proof position".into()))?;
+
+                self.enter_position(child, rest)
+            }
+            Term::Binder {
+                parameter,
+                sort,
+                body,
+            } if *index == 0 => {
+                self.names.insert(
+                    parameter.clone(),
+                    Type::from(&self.checker.parse_sort(sort)?),
+                );
+
+                self.enter_position(body, rest)
+            }
+            _ => Err(SortError::new("invalid proof position".into())),
+        }
+    }
+
+    pub fn clear_names(&mut self) {
+        self.names.clear();
+    }
+
     pub fn equation(&mut self, lhs: &Term, rhs: &Term) -> Result<(), SortError> {
         let left = self.term(lhs)?;
         let right = self.term(rhs)?;
