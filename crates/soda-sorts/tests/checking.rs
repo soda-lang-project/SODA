@@ -58,3 +58,23 @@ fn contradictory_variables_are_rejected_across_rule_sides_and_conditions() {
     );
 }
 
+#[test]
+fn schema_errors_are_not_treated_as_untyped_fallbacks() {
+    for bad in [
+        signature("bad", &["Missing"], "Int"),
+        signature("add", &[], "Int"),
+    ] {
+        let module = Module {
+            signatures: vec![bad],
+            ..Module::default()
+        };
+
+        assert!(TypeChecker::new(&module).is_err());
+    }
+
+    let mut module = typed();
+    module.sorts.push(module.sorts[0].clone());
+
+    assert!(validate_module(&module).is_err());
+}
+
