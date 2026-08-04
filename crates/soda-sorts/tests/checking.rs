@@ -78,3 +78,18 @@ fn schema_errors_are_not_treated_as_untyped_fallbacks() {
     assert!(validate_module(&module).is_err());
 }
 
+#[test]
+fn judgment_sorts_are_shared_across_all_premises() {
+    let mut module = typed();
+    module.clauses.push(Clause {
+        name: "bad".into(),
+        conclusion: app("eval", vec![app("num", vec![var("x")]), var("x")]),
+        premises: vec![app("eval", vec![var("x"), Term::Int(0)])],
+    });
+
+    assert!(validate_module(&module).is_err());
+    module.clauses[0].premises.clear();
+
+    assert!(validate_module(&module).is_ok());
+}
+
