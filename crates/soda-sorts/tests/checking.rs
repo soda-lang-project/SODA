@@ -93,3 +93,19 @@ fn judgment_sorts_are_shared_across_all_premises() {
     assert!(validate_module(&module).is_ok());
 }
 
+#[test]
+fn judgments_cannot_be_data_and_data_cannot_be_judgments() {
+    let module = typed();
+    let checker = TypeChecker::new(&module).unwrap();
+    let goal = app("eval", vec![app("num", vec![Term::Int(1)]), var("n")]);
+
+    assert!(checker.check_judgment(&goal).is_ok());
+    assert!(checker.check_term(&goal).is_err());
+    assert!(
+        checker
+            .check_judgment(&app("num", vec![Term::Int(1)]))
+            .is_err()
+    );
+    assert!(checker.check_term(&app("pair", vec![])).is_err());
+}
+
