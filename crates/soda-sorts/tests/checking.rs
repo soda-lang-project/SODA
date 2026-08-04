@@ -109,3 +109,40 @@ fn judgments_cannot_be_data_and_data_cannot_be_judgments() {
     assert!(checker.check_term(&app("pair", vec![])).is_err());
 }
 
+#[test]
+fn lexical_scope_shadowing_and_function_application_are_checked() {
+    let checker = TypeChecker::new(&typed()).unwrap();
+    let identity = Term::Binder {
+        parameter: "x".into(),
+        sort: "Int".into(),
+        body: Box::new(Term::Name("x".into())),
+    };
+
+    assert_eq!(
+        checker
+            .check_term(&app("apply", vec![identity.clone(), Term::Int(5)]))
+            .unwrap(),
+        Sort::Named("Int".into())
+    );
+    assert!(
+        checker
+            .check_term(&app("apply", vec![identity, Term::Bool(true)]))
+            .is_err()
+    );
+    assert!(checker.check_term(&Term::Name("x".into())).is_err());
+    let nested = Term::Binder {
+        parameter: "x".into(),
+        sort: "Int".into(),
+        body: Box::new(Term::Binder {
+            parameter: "x".into(),
+            sort: "Bool".into(),
+            body: Box::new(Term::Name("x".into())),
+        }),
+    };
+
+    assert_eq!(
+        checker.check_term(&nested).unwrap().to_string(),
+        "Fn(Int, Fn(Bool, Bool))"
+    );
+}
+
