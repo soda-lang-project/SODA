@@ -146,3 +146,38 @@ fn lexical_scope_shadowing_and_function_application_are_checked() {
     );
 }
 
+#[test]
+fn polymorphic_builtins_unify_branches_and_substitution() {
+    let checker = TypeChecker::new(&typed()).unwrap();
+
+    assert!(
+        checker
+            .check_term(&app(
+                "if",
+                vec![Term::Bool(true), Term::Int(1), Term::Bool(false)]
+            ))
+            .is_err()
+    );
+    let expr = app("num", vec![Term::Int(1)]);
+
+    assert_eq!(
+        checker
+            .check_term(&app("eq", vec![expr.clone(), expr]))
+            .unwrap(),
+        Sort::Named("Bool".into())
+    );
+    let substitute = app(
+        "subst",
+        vec![
+            app("add", vec![Term::Name("x".into()), Term::Int(1)]),
+            Term::Name("x".into()),
+            Term::Int(4),
+        ],
+    );
+
+    assert_eq!(
+        checker.check_term(&substitute).unwrap(),
+        Sort::Named("Int".into())
+    );
+}
+
