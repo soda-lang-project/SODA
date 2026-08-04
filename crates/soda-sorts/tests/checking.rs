@@ -181,3 +181,24 @@ fn polymorphic_builtins_unify_branches_and_substitution() {
     );
 }
 
+#[test]
+fn nested_function_sorts_and_occurs_check() {
+    let checker = TypeChecker::new(&typed()).unwrap();
+
+    assert_eq!(
+        checker
+            .parse_sort("Fn(Fn(Int, Bool), Int)")
+            .unwrap()
+            .to_string(),
+        "Fn(Fn(Int, Bool), Int)"
+    );
+    assert!(checker.parse_sort("Fn(Int, Bool, Int)").is_err());
+    assert!(
+        checker
+            .check_term(&app("apply", vec![var("f"), var("f")]))
+            .unwrap_err()
+            .to_string()
+            .contains("infinite")
+    );
+}
+
