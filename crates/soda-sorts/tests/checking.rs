@@ -241,3 +241,26 @@ fn legacy_modules_remain_untyped() {
     assert!(!validate_module(&module).unwrap().typed);
 }
 
+#[test]
+fn axiom_instantiations_preserve_sorts_and_separate_variable_namespaces() {
+    let checker = TypeChecker::new(&typed()).unwrap();
+    let lhs = app("num", vec![var("x")]);
+    let rhs = app("num", vec![var("x")]);
+
+    assert!(
+        checker
+            .check_instantiation(&lhs, &rhs, &[("x".into(), Term::Bool(true))].into())
+            .is_err()
+    );
+    assert!(
+        checker
+            .check_instantiation(&lhs, &rhs, &[("x".into(), var("x"))].into())
+            .is_ok()
+    );
+    assert!(
+        checker
+            .check_instantiation(&lhs, &rhs, &Default::default())
+            .is_err()
+    );
+}
+
