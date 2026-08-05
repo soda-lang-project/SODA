@@ -202,3 +202,32 @@ fn nested_function_sorts_and_occurs_check() {
     );
 }
 
+#[test]
+fn inductive_constructors_remain_free_and_strictly_positive() {
+    let mut module = Module {
+        sorts: vec![SortDecl {
+            name: "Nat".into(),
+            inductive: true,
+        }],
+        signatures: vec![Signature {
+            name: "zero".into(),
+            arguments: vec![],
+            result: "Nat".into(),
+            kind: SignatureKind::Constructor,
+        }],
+        ..Module::default()
+    };
+    module.rules.push(Rule {
+        name: "bad".into(),
+        lhs: app("zero", vec![]),
+        rhs: app("zero", vec![]),
+        condition: None,
+    });
+
+    assert!(validate_module(&module).is_err());
+    module.rules.clear();
+    module.signatures[0].arguments.push("Fn(Nat, Nat)".into());
+
+    assert!(validate_module(&module).is_err());
+}
+
