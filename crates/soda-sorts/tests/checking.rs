@@ -264,3 +264,40 @@ fn axiom_instantiations_preserve_sorts_and_separate_variable_namespaces() {
     );
 }
 
+#[test]
+fn discarded_ill_sorted_certificate_steps_are_rejected() {
+    let mut module = typed();
+    module.equations.push(Equation {
+        name: "collapse".into(),
+        lhs: var("x"),
+        rhs: Term::Int(0),
+    });
+    let bad = [("x".into(), Term::Bool(true))].into();
+    module.proofs.push(Proof {
+        name: "roundtrip".into(),
+        lhs: Term::Int(0),
+        rhs: Term::Int(0),
+        steps: vec![
+            ProofStep {
+                axiom: "collapse".into(),
+                reverse: true,
+                path: vec![],
+                substitution: bad,
+            },
+            ProofStep {
+                axiom: "collapse".into(),
+                reverse: false,
+                path: vec![],
+                substitution: [("x".into(), Term::Bool(true))].into(),
+            },
+        ],
+    });
+
+    assert!(
+        validate_module(&module)
+            .unwrap_err()
+            .to_string()
+            .contains("sort mismatch")
+    );
+}
+
