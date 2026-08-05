@@ -231,3 +231,13 @@ fn inductive_constructors_remain_free_and_strictly_positive() {
     assert!(validate_module(&module).is_err());
 }
 
+#[test]
+fn legacy_modules_remain_untyped() {
+    let module = Module {
+        evaluations: vec![app("unknown", vec![])],
+        ..Module::default()
+    };
+
+    assert!(!validate_module(&module).unwrap().typed);
+}
+
