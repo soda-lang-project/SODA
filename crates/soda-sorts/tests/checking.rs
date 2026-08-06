@@ -466,3 +466,30 @@ fn public_sort_checking_bounds_nesting_for_programmatically_built_modules() {
     assert_eq!(checker.parse_sort(&nested).unwrap().to_string(), nested);
 }
 
+#[test]
+fn computed_binding_sorts_share_conclusion_and_premise_constraints() {
+    let mut module = typed();
+    module.clauses.push(Clause {
+        name: "computed".into(),
+        conclusion: app("eval", vec![app("num", vec![var("n")]), var("result")]),
+        premises: vec![],
+    });
+    module.clause_details.push(soda_ast::ClauseDetail {
+        clause: "computed".into(),
+        premise_labels: vec![],
+        conditions: vec![],
+        bindings: vec![soda_ast::ComputedBinding {
+            before_premise: 0,
+            pattern: var("result"),
+            value: app("add", vec![var("n"), Term::Int(1)]),
+        }],
+    });
+    assert!(validate_module(&module).is_ok());
+    module.clause_details[0].bindings[0].value = Term::Bool(true);
+    assert!(
+        validate_module(&module)
+            .unwrap_err()
+            .to_string()
+            .contains("sort mismatch")
+    );
+}
