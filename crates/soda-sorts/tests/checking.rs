@@ -449,3 +449,20 @@ fn domain_atoms_do_not_enable_the_expression_type_system() {
     assert!(!TypeChecker::new(&module).unwrap().is_typed());
 }
 
+#[test]
+fn public_sort_checking_bounds_nesting_for_programmatically_built_modules() {
+    let checker = TypeChecker::new(&Module::default()).unwrap();
+    let deep = format!("{}Int{}", "Fn(Int, ".repeat(10_000), ")".repeat(10_000));
+
+    assert!(
+        checker
+            .parse_sort(&deep)
+            .unwrap_err()
+            .to_string()
+            .contains("nesting exceeds")
+    );
+    let nested = format!("{}Int{}", "Fn(Int, ".repeat(255), ")".repeat(255));
+
+    assert_eq!(checker.parse_sort(&nested).unwrap().to_string(), nested);
+}
+
