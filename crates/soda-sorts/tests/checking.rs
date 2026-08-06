@@ -377,3 +377,28 @@ fn fresh_takes_a_name_selector_and_a_checked_expression() {
     );
 }
 
+#[test]
+fn binder_annotations_enable_checking_without_any_explicit_declarations() {
+    let identity = Term::Binder {
+        parameter: "x".into(),
+        sort: "Int".into(),
+        body: Box::new(Term::Name("x".into())),
+    };
+    let mut module = Module {
+        evaluations: vec![app("apply", vec![identity.clone(), Term::Bool(false)])],
+        ..Module::default()
+    };
+
+    assert!(TypeChecker::new(&module).unwrap().is_typed());
+    assert!(
+        validate_module(&module)
+            .unwrap_err()
+            .to_string()
+            .contains("sort mismatch")
+    );
+    module.evaluations = vec![app("apply", vec![identity, Term::Int(3)])];
+
+    assert!(validate_module(&module).unwrap().typed);
+    assert!(!TypeChecker::new(&Module::default()).unwrap().is_typed());
+}
+
