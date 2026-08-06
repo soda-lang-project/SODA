@@ -301,3 +301,36 @@ fn discarded_ill_sorted_certificate_steps_are_rejected() {
     );
 }
 
+#[test]
+fn certificate_sort_check_respects_capture_safe_replacement_boundary() {
+    let mut module = typed();
+    module.equations.push(Equation {
+        name: "add_zero".into(),
+        lhs: app("add", vec![var("x"), Term::Int(0)]),
+        rhs: var("x"),
+    });
+    let binder = |body| Term::Binder {
+        parameter: "x".into(),
+        sort: "Int".into(),
+        body: Box::new(body),
+    };
+    module.proofs.push(Proof {
+        name: "under_binder".into(),
+        lhs: binder(app("add", vec![Term::Name("x".into()), Term::Int(0)])),
+        rhs: binder(Term::Name("x".into())),
+        steps: vec![ProofStep {
+            axiom: "add_zero".into(),
+            reverse: false,
+            path: vec![0],
+            substitution: [("x".into(), Term::Name("x".into()))].into(),
+        }],
+    });
+
+    assert!(
+        validate_module(&module)
+            .unwrap_err()
+            .to_string()
+            .contains("invalid proof position")
+    );
+}
+
