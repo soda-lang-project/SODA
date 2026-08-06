@@ -360,3 +360,20 @@ fn labeled_clause_side_conditions_share_the_judgment_variable_context() {
     assert!(validate_module(&module).is_ok());
 }
 
+#[test]
+fn fresh_takes_a_name_selector_and_a_checked_expression() {
+    let checker = TypeChecker::new(&typed()).unwrap();
+
+    assert_eq!(
+        checker
+            .check_term(&app("fresh", vec![Term::Name("x".into()), Term::Int(0)]))
+            .unwrap(),
+        Sort::Named("Bool".into())
+    );
+    assert!(
+        checker
+            .check_term(&app("fresh", vec![Term::Int(0), Term::Int(0)]))
+            .is_err()
+    );
+}
+
