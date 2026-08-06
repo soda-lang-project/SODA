@@ -402,3 +402,35 @@ fn binder_annotations_enable_checking_without_any_explicit_declarations() {
     assert!(!TypeChecker::new(&Module::default()).unwrap().is_typed());
 }
 
+#[test]
+fn annotations_in_substitutions_and_conditions_enable_schema_checks() {
+    let identity = Term::Binder {
+        parameter: "x".into(),
+        sort: "Int".into(),
+        body: Box::new(Term::Name("x".into())),
+    };
+    let mut module = Module::default();
+    module.proofs.push(Proof {
+        name: "p".into(),
+        lhs: Term::Int(0),
+        rhs: Term::Int(0),
+        steps: vec![ProofStep {
+            axiom: "missing".into(),
+            reverse: false,
+            path: vec![],
+            substitution: [("f".into(), identity.clone())].into(),
+        }],
+    });
+
+    assert!(TypeChecker::new(&module).unwrap().is_typed());
+    module.proofs.clear();
+    module.clause_details.push(soda_ast::ClauseDetail {
+        clause: "p".into(),
+        premise_labels: vec![],
+        bindings: vec![],
+        conditions: vec![identity],
+    });
+
+    assert!(TypeChecker::new(&module).unwrap().is_typed());
+}
+
