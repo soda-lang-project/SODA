@@ -434,3 +434,18 @@ fn annotations_in_substitutions_and_conditions_enable_schema_checks() {
     assert!(TypeChecker::new(&module).unwrap().is_typed());
 }
 
+#[test]
+fn domain_atoms_do_not_enable_the_expression_type_system() {
+    let mut module = Module::default();
+    module.domains.push(soda_ast::DomainDecl {
+        name: "Names".into(),
+        expression: soda_ast::DomainExpr::Flat(vec![Term::Binder {
+            parameter: "x".into(),
+            sort: "Int".into(),
+            body: Box::new(Term::Name("x".into())),
+        }]),
+    });
+
+    assert!(!TypeChecker::new(&module).unwrap().is_typed());
+}
+
