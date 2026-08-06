@@ -334,3 +334,29 @@ fn certificate_sort_check_respects_capture_safe_replacement_boundary() {
     );
 }
 
+#[test]
+fn labeled_clause_side_conditions_share_the_judgment_variable_context() {
+    let mut module = typed();
+    module.clauses.push(Clause {
+        name: "value".into(),
+        conclusion: app("eval", vec![app("num", vec![var("n")]), var("n")]),
+        premises: vec![],
+    });
+    module.clause_details.push(soda_ast::ClauseDetail {
+        clause: "value".into(),
+        premise_labels: vec![],
+        bindings: vec![],
+        conditions: vec![var("n")],
+    });
+
+    assert!(
+        validate_module(&module)
+            .unwrap_err()
+            .to_string()
+            .contains("sort mismatch")
+    );
+    module.clause_details[0].conditions = vec![app("ge", vec![var("n"), Term::Int(0)])];
+
+    assert!(validate_module(&module).is_ok());
+}
+
