@@ -41,6 +41,13 @@ fn within_depth(term: &Term, depth: usize, maximum: usize) -> bool {
     true
 }
 
+fn argument_path(parent: &[usize], index: usize) -> Vec<usize> {
+    let mut path = parent.to_vec();
+    path.push(index);
+
+    path
+}
+
 #[derive(Clone, Debug)]
 enum RuleOrigin {
     Primitive(soda_ast::Primitive),
@@ -67,5 +74,17 @@ enum Search {
 }
 
 impl Engine {
-
+    fn evaluated_arguments(&self, name: &str, args: &[Term]) -> usize {
+        match name {
+            "apply"
+                if self.heads.contains("apply")
+                    && !matches!(args.first(), Some(Term::Binder { .. })) =>
+            {
+                args.len()
+            }
+            "if" | "apply" => args.len().min(1),
+            "subst" | "alpha_eq" | "fresh" => 0,
+            _ => args.len(),
+        }
+    }
 }

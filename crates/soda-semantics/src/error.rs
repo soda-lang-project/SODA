@@ -21,6 +21,15 @@ impl RuntimeError {
         }
     }
 
+    pub(crate) fn with_kind(mut self, kind: RuntimeErrorKind) -> Self {
+        self.kind = kind;
+        self
+    }
+
+    pub(crate) fn in_guard(mut self, name: &str) -> Self {
+        self.guards.push(name.into());
+        self
+    }
 }
 
 impl From<String> for RuntimeError {

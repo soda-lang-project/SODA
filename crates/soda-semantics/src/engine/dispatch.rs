@@ -82,6 +82,21 @@ impl Engine {
         })
     }
 
+    pub(super) fn candidates(&self, term: &Term) -> impl Iterator<Item = &Rule> {
+        let indices = match term {
+            Term::App(head, args) => self
+                .dispatch
+                .get(head)
+                .and_then(|arities| arities.get(&args.len())),
+            _ => None,
+        };
+
+        indices
+            .into_iter()
+            .flatten()
+            .map(|&index| &self.rules[index])
+    }
+
     pub fn rules(&self) -> &[Rule] {
         &self.rules
     }
