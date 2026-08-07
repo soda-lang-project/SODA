@@ -149,3 +149,48 @@ fn binder_application_keeps_primitive_priority_and_a_lazy_argument() {
     assert_eq!(steps[0].after, Term::Int(42));
 }
 
+#[test]
+fn primitive_application_reports_invalid_arity_and_scalar_operands() {
+    let engine = Engine::new(vec![]).unwrap();
+
+    for term in [
+        app("apply", vec![]),
+        app("apply", vec![Term::Int(1)]),
+        apply(Term::Int(1), Term::Int(2)),
+    ] {
+        assert!(matches!(
+            engine.evaluate(&term, &Config::default()).status,
+            Status::Error(_)
+        ));
+        assert!(matches!(
+            engine.denote(&term, &Config::default()).status,
+            Status::Error(_)
+        ));
+        assert!(matches!(
+            engine.successors(&term, &Config::default()),
+            Err(Status::Error(_))
+        ));
+    }
+
+    let unresolved = apply(atom("unknown_function"), Term::Int(1));
+
+    assert!(matches!(
+        engine.evaluate(&unresolved, &Config::default()).status,
+        Status::Stuck(_)
+    ));
+    let binder = Term::Binder {
+        parameter: "x".into(),
+        sort: "Int".into(),
+        body: Box::new(Term::Name("x".into())),
+    };
+    let engine = Engine::new(vec![rule("function", atom("function"), binder)]).unwrap();
+    let term = apply(atom("function"), Term::Int(9));
+
+    for result in [
+        engine.evaluate(&term, &Config::default()),
+        engine.denote(&term, &Config::default()),
+    ] {
+        assert_eq!(result.status, Status::NormalForm);
+        assert_eq!(result.term, Term::Int(9));
+    }
+}
