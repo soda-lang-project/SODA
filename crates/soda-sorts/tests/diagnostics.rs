@@ -23,3 +23,29 @@ fn argument_errors_preserve_actual_expected_and_the_smallest_failing_term() {
     assert_eq!(error.found.as_deref(), Some("Bool"));
 }
 
+#[test]
+fn independent_errors_accumulate_but_invalid_schemas_do_not_cascade() {
+    let mut module = Module {
+        signatures: vec![Signature {
+            name: "f".into(),
+            arguments: vec!["Int".into()],
+            result: "Int".into(),
+            kind: SignatureKind::Function,
+        }],
+        evaluations: vec![
+            Term::app("f", vec![Term::Bool(true)]),
+            Term::app("add", vec![Term::Bool(false), Term::Int(3)]),
+        ],
+        ..Module::default()
+    };
+    let errors = validate_module_all(&module).unwrap_err();
+
+    assert_eq!(errors.len(), 2);
+    module.signatures[0].result = "Missing".into();
+    let errors = validate_module_all(&module).unwrap_err();
+
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].declaration.as_deref(), Some("f"));
+    assert_eq!(errors[0].symbol.as_deref(), Some("Missing"));
+}
+
