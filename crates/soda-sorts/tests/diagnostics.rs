@@ -49,3 +49,31 @@ fn independent_errors_accumulate_but_invalid_schemas_do_not_cascade() {
     assert_eq!(errors[0].symbol.as_deref(), Some("Missing"));
 }
 
+#[test]
+fn schema_failures_identify_the_constructor_or_notation_declaration() {
+    let module = Module {
+        signatures: vec![Signature {
+            name: "bad_constructor".into(),
+            arguments: vec![],
+            result: "Int".into(),
+            kind: SignatureKind::Constructor,
+        }],
+        ..Module::default()
+    };
+    let error = TypeChecker::new(&module).unwrap_err();
+
+    assert_eq!(error.declaration.as_deref(), Some("bad_constructor"));
+    let module = Module {
+        notations: vec![soda_ast::NotationDecl {
+            judgment: "missing".into(),
+            unicode: "$0 ⇓ $1".into(),
+            ascii: "$0 ==> $1".into(),
+        }],
+        ..Module::default()
+    };
+    let error = TypeChecker::new(&module).unwrap_err();
+
+    assert_eq!(error.declaration.as_deref(), Some("missing"));
+    assert_eq!(error.symbol.as_deref(), Some("missing"));
+}
+
