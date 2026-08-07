@@ -119,3 +119,33 @@ fn custom_application_exposes_every_rule_and_both_argument_contexts() {
     );
 }
 
+#[test]
+fn binder_application_keeps_primitive_priority_and_a_lazy_argument() {
+    let engine = Engine::new(vec![rule(
+        "legacy_catchall",
+        apply(variable("function"), variable("argument")),
+        atom("legacy"),
+    )])
+    .unwrap();
+    let binder = Term::Binder {
+        parameter: "x".into(),
+        sort: "Int".into(),
+        body: Box::new(Term::Int(42)),
+    };
+    let term = apply(binder, app("div", vec![Term::Int(1), Term::Int(0)]));
+
+    for result in [
+        engine.evaluate(&term, &Config::default()),
+        engine.denote(&term, &Config::default()),
+    ] {
+        assert_eq!(result.status, Status::NormalForm);
+        assert_eq!(result.term, Term::Int(42));
+    }
+
+    let steps = engine.successors(&term, &Config::default()).unwrap();
+
+    assert_eq!(steps.len(), 1);
+    assert_eq!(steps[0].rule, "builtin:apply");
+    assert_eq!(steps[0].after, Term::Int(42));
+}
+
