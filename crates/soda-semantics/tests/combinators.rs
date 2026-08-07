@@ -69,3 +69,53 @@ fn unchanged_ski_rules_compute_identity_and_ignore_divergent_arguments() {
     assert_eq!(result.term, Term::Int(42));
 }
 
+#[test]
+fn custom_application_exposes_every_rule_and_both_argument_contexts() {
+    let engine = Engine::new(vec![
+        rule("first", apply(atom("i"), variable("x")), variable("x")),
+        rule(
+            "second",
+            apply(atom("i"), variable("x")),
+            atom("alternative"),
+        ),
+    ])
+    .unwrap();
+    let root = engine
+        .successors(&apply(atom("i"), Term::Int(1)), &Config::default())
+        .unwrap();
+
+    assert_eq!(root.len(), 2);
+    assert_eq!(
+        root.iter()
+            .map(|step| step.rule.as_str())
+            .collect::<Vec<_>>(),
+        vec!["first", "second"]
+    );
+    let contextual = apply(
+        atom("unknown"),
+        app("add", vec![Term::Int(1), Term::Int(2)]),
+    );
+    let steps = engine.successors(&contextual, &Config::default()).unwrap();
+
+    assert_eq!(steps.len(), 1);
+    assert_eq!(steps[0].path, vec![1]);
+    assert_eq!(steps[0].after, Term::Int(3));
+    assert_eq!(
+        engine.denote(&contextual, &Config::default()).term,
+        apply(atom("unknown"), Term::Int(3))
+    );
+    let both = apply(
+        app("add", vec![Term::Int(1), Term::Int(2)]),
+        app("mul", vec![Term::Int(3), Term::Int(4)]),
+    );
+    let steps = engine.successors(&both, &Config::default()).unwrap();
+
+    assert_eq!(
+        steps
+            .iter()
+            .map(|step| step.path.clone())
+            .collect::<Vec<_>>(),
+        vec![vec![0], vec![1]]
+    );
+}
+
