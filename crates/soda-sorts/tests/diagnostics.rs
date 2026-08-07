@@ -77,3 +77,14 @@ fn schema_failures_identify_the_constructor_or_notation_declaration() {
     assert_eq!(error.symbol.as_deref(), Some("missing"));
 }
 
+#[test]
+fn ambiguous_variables_and_non_application_goals_retain_source_terms() {
+    let checker = TypeChecker::new(&Module::default()).unwrap();
+    let variable = Term::Var("unconstrained".into());
+    let error = checker.check_equation(&variable, &variable).unwrap_err();
+
+    assert_eq!(error.term.as_deref(), Some(&variable));
+    let error = checker.check_judgment(&Term::Int(1)).unwrap_err();
+
+    assert_eq!(error.term.as_deref(), Some(&Term::Int(1)));
+}
