@@ -225,3 +225,32 @@ fn all_builtins_and_checked_arithmetic() {
     }
 }
 
+#[test]
+fn laziness_preserves_ignored_divergent_and_erroneous_branches() {
+    let engine = Engine::new(vec![rule(
+        "loop",
+        app("loop", vec![]),
+        app("loop", vec![]),
+        None,
+    )])
+    .unwrap();
+
+    for strategy in [Strategy::Outermost, Strategy::Innermost] {
+        let config = Config {
+            strategy,
+            fuel: 10,
+            ..Config::default()
+        };
+        let term = app("if", vec![Term::Bool(true), int(42), app("loop", vec![])]);
+
+        assert_eq!(engine.evaluate(&term, &config).term, int(42));
+        assert_eq!(engine.denote(&term, &config).term, int(42));
+        let term = app(
+            "if",
+            vec![Term::Bool(false), app("div", vec![int(1), int(0)]), int(9)],
+        );
+
+        assert_eq!(engine.evaluate(&term, &config).term, int(9));
+    }
+}
+
