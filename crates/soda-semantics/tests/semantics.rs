@@ -171,3 +171,57 @@ fn factorial_agrees_across_independent_interpreters() {
     }
 }
 
+#[test]
+fn all_builtins_and_checked_arithmetic() {
+    let engine = Engine::new(vec![]).unwrap();
+
+    for (name, a, b, expected) in [
+        ("add", 8, 3, 11),
+        ("sub", 8, 3, 5),
+        ("mul", 8, 3, 24),
+        ("div", 8, 3, 2),
+        ("mod", 8, 3, 2),
+    ] {
+        assert_eq!(
+            evaluate(&engine, &app(name, vec![int(a), int(b)])).term,
+            int(expected)
+        );
+    }
+
+    for name in ["lt", "le", "gt", "ge", "eq"] {
+        assert_eq!(
+            evaluate(&engine, &app(name, vec![int(2), int(2)])).term,
+            Term::Bool(matches!(name, "le" | "ge" | "eq"))
+        );
+    }
+
+    for (name, args, expected) in [
+        ("and", vec![Term::Bool(true), Term::Bool(false)], false),
+        ("or", vec![Term::Bool(true), Term::Bool(false)], true),
+        ("not", vec![Term::Bool(false)], true),
+    ] {
+        assert_eq!(
+            evaluate(&engine, &app(name, args)).term,
+            Term::Bool(expected)
+        );
+    }
+
+    for term in [
+        app("div", vec![int(1), int(0)]),
+        app("mod", vec![int(1), int(0)]),
+        app("div", vec![int(i64::MIN), int(-1)]),
+        app("mod", vec![int(i64::MIN), int(-1)]),
+        app("add", vec![int(i64::MAX), int(1)]),
+        app("sub", vec![int(i64::MIN), int(1)]),
+        app("mul", vec![int(i64::MAX), int(2)]),
+        app("add", vec![Term::Bool(true), int(1)]),
+        app("not", vec![]),
+        app("if", vec![int(1), int(2), int(3)]),
+    ] {
+        assert!(
+            matches!(evaluate(&engine, &term).status, Status::Error(_)),
+            "{term}"
+        );
+    }
+}
+
