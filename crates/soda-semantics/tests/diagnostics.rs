@@ -45,3 +45,33 @@ fn guard_evaluation_does_not_replace_the_observable_rule_provenance() {
     assert_eq!(result.steps, 2);
 }
 
+#[test]
+fn runtime_causes_survive_nested_guard_context() {
+    let engine = Engine::new(vec![
+        Rule {
+            name: "outer".into(),
+            lhs: Term::app("outer", vec![]),
+            rhs: Term::Bool(true),
+            condition: Some(Term::app("inner", vec![])),
+        },
+        Rule {
+            name: "inner".into(),
+            lhs: Term::app("inner", vec![]),
+            rhs: Term::Bool(true),
+            condition: Some(Term::app("div", vec![Term::Int(1), Term::Int(0)])),
+        },
+    ])
+    .unwrap();
+    let result = engine.evaluate(&Term::app("outer", vec![]), &Config::default());
+    let Status::Error(error) = result.status else {
+        panic!("expected a runtime error");
+    };
+
+    assert_eq!(error.kind, RuntimeErrorKind::DivisionByZero);
+    assert_eq!(error.guards, ["inner", "outer"]);
+    assert_eq!(
+        error.to_string(),
+        "guard of outer: guard of inner: div by zero"
+    );
+    assert!(result.last_rule.is_none());
+}
