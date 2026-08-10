@@ -137,3 +137,37 @@ fn in_place_reduction_preserves_partial_results_limits_and_trace_positions() {
     }
 }
 
+#[test]
+fn factorial_agrees_across_independent_interpreters() {
+    let x = var("n");
+    let engine = Engine::new(vec![rule(
+        "factorial",
+        app("fact", vec![x.clone()]),
+        app(
+            "if",
+            vec![
+                app("eq", vec![x.clone(), int(0)]),
+                int(1),
+                app(
+                    "mul",
+                    vec![x.clone(), app("fact", vec![app("sub", vec![x, int(1)])])],
+                ),
+            ],
+        ),
+        None,
+    )])
+    .unwrap();
+
+    for n in 0..8 {
+        let term = app("fact", vec![int(n)]);
+        let expected: i64 = (1..=n).product();
+        let operational = evaluate(&engine, &term);
+        let denotational = engine.denote(&term, &Config::default());
+
+        assert_eq!(operational.status, Status::NormalForm);
+        assert_eq!(denotational.status, Status::NormalForm);
+        assert_eq!(operational.term, int(expected));
+        assert_eq!(denotational.term, int(expected));
+    }
+}
+
