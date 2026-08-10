@@ -22,3 +22,26 @@ fn failures_keep_the_last_user_rule_without_collecting_a_full_trace() {
     }
 }
 
+#[test]
+fn guard_evaluation_does_not_replace_the_observable_rule_provenance() {
+    let engine = Engine::new(vec![
+        Rule {
+            name: "outer".into(),
+            lhs: Term::app("outer", vec![]),
+            rhs: Term::Bool(true),
+            condition: Some(Term::app("probe", vec![])),
+        },
+        Rule {
+            name: "guard_only".into(),
+            lhs: Term::app("probe", vec![]),
+            rhs: Term::Bool(true),
+            condition: None,
+        },
+    ])
+    .unwrap();
+    let result = engine.evaluate(&Term::app("outer", vec![]), &Config::default());
+
+    assert_eq!(result.last_rule.as_deref(), Some("outer"));
+    assert_eq!(result.steps, 2);
+}
+
