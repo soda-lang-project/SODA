@@ -472,3 +472,37 @@ fn strategies_are_observably_distinct_and_zero_fuel_can_accept_values() {
     );
 }
 
+#[test]
+fn compositional_guards_do_not_depend_on_operational_strategy() {
+    let engine = Engine::new(vec![
+        rule(
+            "erase",
+            app("erase", vec![var("x")]),
+            Term::Bool(true),
+            None,
+        ),
+        rule("loop", app("loop", vec![]), app("loop", vec![]), None),
+        rule(
+            "guard",
+            app("guard", vec![]),
+            int(1),
+            Some(app("erase", vec![app("loop", vec![])])),
+        ),
+    ])
+    .unwrap();
+    let term = app("guard", vec![]);
+
+    for strategy in [Strategy::Outermost, Strategy::Innermost] {
+        let config = Config {
+            fuel: 5,
+            strategy,
+            ..Config::default()
+        };
+
+        assert_eq!(
+            engine.denote(&term, &config).status,
+            Status::Limit(Limit::Fuel)
+        );
+    }
+}
+
