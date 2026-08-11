@@ -434,3 +434,41 @@ fn trace_replays_and_repeated_variables_match_consistently() {
     ));
 }
 
+#[test]
+fn strategies_are_observably_distinct_and_zero_fuel_can_accept_values() {
+    let engine = Engine::new(vec![
+        rule("erase", app("erase", vec![var("x")]), int(7), None),
+        rule("loop", app("loop", vec![]), app("loop", vec![]), None),
+    ])
+    .unwrap();
+    let input = app("erase", vec![app("loop", vec![])]);
+    let config = Config {
+        fuel: 5,
+        ..Config::default()
+    };
+
+    assert_eq!(engine.evaluate(&input, &config).term, int(7));
+    assert_eq!(
+        engine
+            .evaluate(
+                &input,
+                &Config {
+                    strategy: Strategy::Innermost,
+                    ..config.clone()
+                }
+            )
+            .status,
+        Status::Limit(Limit::Fuel)
+    );
+    assert_eq!(
+        engine.denote(&input, &config).status,
+        Status::Limit(Limit::Fuel)
+    );
+    assert_eq!(
+        engine
+            .evaluate(&int(1), &Config { fuel: 0, ..config })
+            .status,
+        Status::NormalForm
+    );
+}
+
