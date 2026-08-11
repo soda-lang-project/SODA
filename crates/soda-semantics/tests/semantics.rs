@@ -353,3 +353,34 @@ fn false_and_undecidable_guards_are_stuck_and_alternatives_work() {
     assert_eq!(evaluate(&engine, &app("f", vec![])).term, int(2));
 }
 
+#[test]
+fn structural_equality_normalizes_defined_children() {
+    let engine = Engine::new(vec![rule(
+        "key",
+        app("key", vec![]),
+        app("a", vec![]),
+        None,
+    )])
+    .unwrap();
+    let term = app(
+        "eq",
+        vec![
+            app("pair", vec![app("key", vec![]), int(2)]),
+            app("pair", vec![app("a", vec![]), int(2)]),
+        ],
+    );
+
+    assert_eq!(evaluate(&engine, &term).term, Term::Bool(true));
+    assert_eq!(
+        engine.denote(&term, &Config::default()).term,
+        Term::Bool(true)
+    );
+    let open = app("eq", vec![var("x"), var("x")]);
+
+    assert!(matches!(evaluate(&engine, &open).status, Status::Stuck(_)));
+    assert!(matches!(
+        engine.denote(&open, &Config::default()).status,
+        Status::Stuck(_)
+    ));
+}
+
