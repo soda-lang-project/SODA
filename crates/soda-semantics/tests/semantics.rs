@@ -254,3 +254,76 @@ fn laziness_preserves_ignored_divergent_and_erroneous_branches() {
     }
 }
 
+#[test]
+fn fuel_depth_and_divergent_guards_are_explicit_limits() {
+    let engine = Engine::new(vec![
+        rule("loop", app("loop", vec![]), app("loop", vec![]), None),
+        rule(
+            "guarded",
+            app("guarded", vec![]),
+            int(1),
+            Some(app("loop", vec![])),
+        ),
+        rule(
+            "grow",
+            app("grow", vec![]),
+            app("box", vec![app("grow", vec![])]),
+            None,
+        ),
+    ])
+    .unwrap();
+    let config = Config {
+        fuel: 8,
+        ..Config::default()
+    };
+
+    for name in ["loop", "guarded"] {
+        let result = engine.evaluate(&app(name, vec![]), &config);
+
+        assert_eq!(result.status, Status::Limit(Limit::Fuel));
+        assert_eq!(result.steps, 8);
+        assert_eq!(
+            engine.denote(&app(name, vec![]), &config).status,
+            Status::Limit(Limit::Fuel)
+        );
+    }
+
+    let config = Config {
+        fuel: 100,
+        max_depth: 4,
+        ..Config::default()
+    };
+
+    assert_eq!(
+        engine.evaluate(&app("grow", vec![]), &config).status,
+        Status::Limit(Limit::Depth)
+    );
+    assert_eq!(
+        engine.denote(&app("grow", vec![]), &config).status,
+        Status::Limit(Limit::Depth)
+    );
+    let engine = Engine::new(vec![rule(
+        "self_guard",
+        app("f", vec![]),
+        int(1),
+        Some(app("f", vec![])),
+    )])
+    .unwrap();
+
+    assert_eq!(
+        engine.evaluate(&app("f", vec![]), &config).status,
+        Status::Limit(Limit::Depth)
+    );
+    let unbounded_request = Config {
+        max_depth: usize::MAX,
+        ..Config::default()
+    };
+
+    assert_eq!(
+        engine
+            .evaluate(&app("f", vec![]), &unbounded_request)
+            .status,
+        Status::Limit(Limit::Depth)
+    );
+}
+
