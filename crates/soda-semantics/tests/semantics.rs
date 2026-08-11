@@ -506,3 +506,15 @@ fn compositional_guards_do_not_depend_on_operational_strategy() {
     }
 }
 
+#[test]
+fn invalid_rules_are_rejected() {
+    let valid = rule("r", app("f", vec![var("x")]), var("x"), None);
+
+    assert!(Engine::new(vec![valid.clone(), valid]).is_err());
+    assert!(Engine::new(vec![rule("r", var("x"), int(1), None)]).is_err());
+    assert!(Engine::new(vec![rule("r", int(1), int(2), None)]).is_err());
+    assert!(Engine::new(vec![rule("r", app("f", vec![]), var("x"), None)]).is_err());
+    assert!(Engine::new(vec![rule("r", app("f", vec![]), int(1), Some(var("x")))]).is_err());
+    assert!(Engine::new(vec![rule("r", app("add", vec![]), int(1), None)]).is_err());
+}
+
