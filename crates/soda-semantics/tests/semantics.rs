@@ -384,3 +384,53 @@ fn structural_equality_normalizes_defined_children() {
     ));
 }
 
+#[test]
+fn trace_replays_and_repeated_variables_match_consistently() {
+    let engine = Engine::new(vec![rule(
+        "same",
+        app("same", vec![var("x"), var("x")]),
+        Term::Bool(true),
+        None,
+    )])
+    .unwrap();
+    let input = app(
+        "pair",
+        vec![
+            app("same", vec![int(1), int(1)]),
+            app("add", vec![int(2), int(3)]),
+        ],
+    );
+
+    for strategy in [Strategy::Outermost, Strategy::Innermost] {
+        let config = Config {
+            trace: true,
+            strategy,
+            ..Config::default()
+        };
+        let result = engine.evaluate(&input, &config);
+
+        assert_eq!(result.status, Status::NormalForm);
+        let mut replay = input.clone();
+
+        for step in &result.trace {
+            assert_eq!(replay.at(&step.path), Some(&step.before));
+            replay = replay.replace(&step.path, step.after.clone()).unwrap();
+        }
+
+        assert_eq!(replay, result.term);
+        assert_eq!(
+            result
+                .trace
+                .iter()
+                .map(|s| s.rule.as_str())
+                .collect::<Vec<_>>(),
+            ["same", "builtin:add"]
+        );
+    }
+
+    assert!(matches!(
+        evaluate(&engine, &app("same", vec![int(1), int(2)])).status,
+        Status::Stuck(_)
+    ));
+}
+
