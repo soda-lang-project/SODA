@@ -518,3 +518,66 @@ fn invalid_rules_are_rejected() {
     assert!(Engine::new(vec![rule("r", app("add", vec![]), int(1), None)]).is_err());
 }
 
+#[test]
+fn nondeterministic_successors_expose_overlaps_and_contexts() {
+    let engine = Engine::new(vec![
+        rule("left", app("choose", vec![]), int(1), None),
+        rule("right", app("choose", vec![]), int(2), None),
+        rule(
+            "blocked",
+            app("choose", vec![]),
+            int(3),
+            Some(Term::Bool(false)),
+        ),
+    ])
+    .unwrap();
+    let term = app("pair", vec![app("choose", vec![]), app("choose", vec![])]);
+    let steps = engine.successors(&term, &Config::default()).unwrap();
+
+    assert_eq!(
+        steps
+            .iter()
+            .map(|s| (s.rule.as_str(), s.path.clone()))
+            .collect::<Vec<_>>(),
+        [
+            ("left", vec![0]),
+            ("right", vec![0]),
+            ("left", vec![1]),
+            ("right", vec![1])
+        ]
+    );
+    for step in steps {
+        assert_eq!(term.at(&step.path), Some(&step.before));
+        assert!(term.replace(&step.path, step.after).is_some());
+    }
+
+    let term = app("if", vec![Term::Bool(true), int(1), app("choose", vec![])]);
+
+    assert_eq!(
+        engine.successors(&term, &Config::default()).unwrap().len(),
+        1
+    );
+    assert!(matches!(
+        engine.successors(
+            &app("choose", vec![]),
+            &Config {
+                fuel: 0,
+                ..Config::default()
+            }
+        ),
+        Err(Status::Limit(Limit::Fuel))
+    ));
+    let engine = Engine::new(vec![rule(
+        "unknown",
+        app("choose", vec![]),
+        int(1),
+        Some(app("unknown", vec![])),
+    )])
+    .unwrap();
+
+    assert!(matches!(
+        engine.successors(&app("choose", vec![]), &Config::default()),
+        Err(Status::Stuck(_))
+    ));
+}
+
