@@ -327,3 +327,29 @@ fn fuel_depth_and_divergent_guards_are_explicit_limits() {
     );
 }
 
+#[test]
+fn false_and_undecidable_guards_are_stuck_and_alternatives_work() {
+    for guard in [Term::Bool(false), app("unknown", vec![]), var("x")] {
+        let engine = Engine::new(vec![rule(
+            "guard",
+            app("f", vec![var("x")]),
+            int(1),
+            Some(guard),
+        )])
+        .unwrap();
+
+        assert!(matches!(
+            evaluate(&engine, &app("f", vec![int(2)])).status,
+            Status::Stuck(_)
+        ));
+    }
+
+    let engine = Engine::new(vec![
+        rule("reject", app("f", vec![]), int(1), Some(Term::Bool(false))),
+        rule("fallback", app("f", vec![]), int(2), None),
+    ])
+    .unwrap();
+
+    assert_eq!(evaluate(&engine, &app("f", vec![])).term, int(2));
+}
+
