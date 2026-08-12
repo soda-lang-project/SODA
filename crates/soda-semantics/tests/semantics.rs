@@ -581,3 +581,43 @@ fn nondeterministic_successors_expose_overlaps_and_contexts() {
     ));
 }
 
+#[test]
+fn binding_builtins_are_capture_avoiding_and_binders_are_values() {
+    let engine = Engine::new(vec![]).unwrap();
+    let name = |n: &str| Term::Name(n.into());
+    let binder = |n: &str, body| Term::Binder {
+        parameter: n.into(),
+        sort: "Expr".into(),
+        body: Box::new(body),
+    };
+    let function = binder("x", binder("y", name("x")));
+    let application = app("apply", vec![function, name("y")]);
+
+    for result in [
+        engine.evaluate(&application, &Config::default()),
+        engine.denote(&application, &Config::default()),
+    ] {
+        assert_eq!(result.status, Status::NormalForm);
+        assert!(result.term.alpha_equivalent(&binder("z", name("y"))));
+        assert_eq!(result.term.free_names(), ["y".into()].into());
+    }
+
+    let suspended = binder("x", app("div", vec![int(1), int(0)]));
+
+    assert_eq!(evaluate(&engine, &suspended).term, suspended);
+    let substitution = app("subst", vec![binder("y", name("x")), name("x"), name("y")]);
+
+    assert!(
+        engine
+            .denote(&substitution, &Config::default())
+            .term
+            .alpha_equivalent(&binder("z", name("y")))
+    );
+    let equality = app(
+        "alpha_eq",
+        vec![binder("x", name("x")), binder("y", name("y"))],
+    );
+
+    assert_eq!(evaluate(&engine, &equality).term, Term::Bool(true));
+}
+
