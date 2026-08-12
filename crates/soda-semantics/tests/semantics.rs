@@ -621,3 +621,32 @@ fn binding_builtins_are_capture_avoiding_and_binders_are_values() {
     assert_eq!(evaluate(&engine, &equality).term, Term::Bool(true));
 }
 
+#[test]
+fn freshness_side_conditions_distinguish_free_and_bound_names() {
+    let engine = Engine::new(vec![]).unwrap();
+    let x = Term::Name("x".into());
+    let bound = Term::Binder {
+        parameter: "x".into(),
+        sort: "Expr".into(),
+        body: Box::new(x.clone()),
+    };
+
+    for (term, expected) in [(x.clone(), false), (bound, true)] {
+        let query = app("fresh", vec![x.clone(), term]);
+
+        assert_eq!(evaluate(&engine, &query).term, Term::Bool(expected));
+        assert_eq!(
+            engine.denote(&query, &Config::default()).term,
+            Term::Bool(expected)
+        );
+    }
+
+    assert!(matches!(
+        evaluate(&engine, &app("fresh", vec![int(1), int(2)])).status,
+        Status::Error(_)
+    ));
+    assert!(matches!(
+        evaluate(&engine, &app("fresh", vec![x, var("unknown")])).status,
+        Status::Stuck(_)
+    ));
+}
