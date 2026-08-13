@@ -7,6 +7,6 @@ mod validation;
 
 pub use analysis::{TerminationAnalysis, analyze_termination, unify};
 pub use error::{VerificationError, VerificationErrorKind};
-pub use kernel::{VerificationReport, VerifiedProof};
+pub use kernel::{VerificationReport, VerifiedProof, verify_module, verify_proof};
 pub use overlaps::{CriticalPair, CriticalPairAnalysis};
 pub use validation::{MAX_VALIDATION_DEPTH, validate_module};

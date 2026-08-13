@@ -44,6 +44,17 @@ impl VerificationError {
         }
     }
 
+    pub(crate) fn comparison(mut self, expected: Term, found: Term) -> Self {
+        self.kind = VerificationErrorKind::Comparison;
+        self.expected = Some(Box::new(expected));
+        self.found = Some(Box::new(found));
+        self
+    }
+
+    pub(crate) fn with_kind(mut self, kind: VerificationErrorKind) -> Self {
+        self.kind = kind;
+        self
+    }
 }
 
 impl fmt::Display for VerificationError {
