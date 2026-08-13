@@ -38,3 +38,19 @@ fn checks_substitution_and_congruence() {
     assert_eq!(result.steps_checked, 1);
 }
 
+#[test]
+fn symmetry_and_open_terms_are_sound() {
+    let mut proof = certificate();
+    std::mem::swap(&mut proof.lhs, &mut proof.rhs);
+    proof.steps[0].reverse = true;
+
+    assert!(verify_proof(&[axiom()], &proof).is_ok());
+    let equation = axiom();
+    proof.lhs = var("y");
+    proof.rhs = app("add", vec![var("y"), Term::Int(0)]);
+    proof.steps[0].path.clear();
+    proof.steps[0].substitution.insert("x".into(), var("y"));
+
+    assert!(verify_proof(&[equation], &proof).is_ok());
+}
+
