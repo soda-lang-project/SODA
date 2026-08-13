@@ -54,3 +54,13 @@ fn symmetry_and_open_terms_are_sound() {
     assert!(verify_proof(&[equation], &proof).is_ok());
 }
 
+#[test]
+fn rejects_bad_positions_without_panicking() {
+    for path in [vec![1], vec![0, 2], vec![0, 0, 0], vec![usize::MAX]] {
+        let mut proof = certificate();
+        proof.steps[0].path = path;
+
+        assert!(verify_proof(&[axiom()], &proof).is_err());
+    }
+}
+
