@@ -64,3 +64,15 @@ fn rejects_bad_positions_without_panicking() {
     }
 }
 
+#[test]
+fn rejects_wrong_instance_and_wrong_conclusion() {
+    let mut proof = certificate();
+    proof.steps[0].substitution.insert("x".into(), Term::Int(8));
+
+    assert!(verify_proof(&[axiom()], &proof).is_err());
+    let mut proof = certificate();
+    proof.rhs = Term::Bool(false);
+
+    assert!(verify_proof(&[axiom()], &proof).is_err());
+}
+
