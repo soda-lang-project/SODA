@@ -5,7 +5,7 @@ mod kernel;
 mod overlaps;
 mod validation;
 
-pub use analysis::{TerminationAnalysis};
+pub use analysis::{TerminationAnalysis, unify};
 pub use error::{VerificationError, VerificationErrorKind};
 pub use kernel::{VerificationReport, VerifiedProof};
 pub use overlaps::{CriticalPair, CriticalPairAnalysis};

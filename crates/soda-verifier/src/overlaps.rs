@@ -2,7 +2,7 @@ use soda_ast::{Module, Rule, Substitution, Term};
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::validation::validate_term;
-use crate::{VerificationError, validate_module};
+use crate::{VerificationError, unify, validate_module};
 
 /// A syntactic peak with variables freshened independently of other pairs.
 #[derive(Clone, Debug, PartialEq, Eq)]
