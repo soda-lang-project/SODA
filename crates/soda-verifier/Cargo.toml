@@ -1,0 +1,12 @@
+[package]
+name = "soda-verifier"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+soda-ast.workspace = true
+soda-sorts = { path = "../soda-sorts" }
+
+[lints]
+workspace = true
