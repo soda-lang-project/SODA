@@ -157,3 +157,14 @@ fn rejects_unknown_axioms_shadowing_and_self_reference() {
     assert!(verify_module(&module).is_err());
 }
 
+#[test]
+fn empty_certificate_proves_only_reflexivity() {
+    let mut proof = certificate();
+    proof.steps.clear();
+
+    assert!(verify_proof(&[], &proof).is_err());
+    proof.rhs = proof.lhs.clone();
+
+    assert!(verify_proof(&[], &proof).is_ok());
+}
+
