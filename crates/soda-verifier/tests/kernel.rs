@@ -168,3 +168,28 @@ fn empty_certificate_proves_only_reflexivity() {
     assert!(verify_proof(&[], &proof).is_ok());
 }
 
+#[test]
+fn validates_rule_and_condition_scope() {
+    let mut module = Module {
+        rules: vec![Rule {
+            name: "unsafe".into(),
+            lhs: app("f", vec![var("x")]),
+            rhs: var("y"),
+            condition: None,
+        }],
+        ..Module::default()
+    };
+
+    assert!(validate_module(&module).is_err());
+    module.rules[0].rhs = var("x");
+    module.rules[0].condition = Some(var("y"));
+
+    assert!(validate_module(&module).is_err());
+    module.rules[0].condition = Some(var("x"));
+
+    assert!(validate_module(&module).is_ok());
+    module.rules[0].lhs = var("x");
+
+    assert!(validate_module(&module).is_err());
+}
+
