@@ -137,3 +137,23 @@ fn repeated_variables_are_constraints() {
     assert!(verify_proof(&[equation], &proof).is_err());
 }
 
+#[test]
+fn rejects_unknown_axioms_shadowing_and_self_reference() {
+    let mut proof = certificate();
+    proof.steps[0].axiom = proof.name.clone();
+
+    assert!(verify_proof(&[axiom()], &proof).is_err());
+    assert!(verify_proof(&[axiom(), axiom()], &certificate()).is_err());
+    let mut proof = certificate();
+    proof.name = "identity".into();
+
+    assert!(verify_proof(&[axiom()], &proof).is_err());
+    let module = Module {
+        equations: vec![axiom()],
+        proofs: vec![certificate(), certificate()],
+        ..Module::default()
+    };
+
+    assert!(verify_module(&module).is_err());
+}
+
