@@ -76,3 +76,17 @@ fn rejects_wrong_instance_and_wrong_conclusion() {
     assert!(verify_proof(&[axiom()], &proof).is_err());
 }
 
+#[test]
+fn rejects_missing_and_extraneous_bindings() {
+    let mut proof = certificate();
+    proof.steps[0].substitution.clear();
+
+    assert!(verify_proof(&[axiom()], &proof).is_err());
+    let mut proof = certificate();
+    proof.steps[0]
+        .substitution
+        .insert("extra".into(), Term::Int(9));
+
+    assert!(verify_proof(&[axiom()], &proof).is_err());
+}
+
