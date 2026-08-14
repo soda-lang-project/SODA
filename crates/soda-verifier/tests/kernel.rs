@@ -90,3 +90,28 @@ fn rejects_missing_and_extraneous_bindings() {
     assert!(verify_proof(&[axiom()], &proof).is_err());
 }
 
+#[test]
+fn binds_variables_on_both_sides_even_in_reverse() {
+    let equation = Equation {
+        name: "assumption".into(),
+        lhs: var("x"),
+        rhs: var("y"),
+    };
+    let mut proof = Proof {
+        name: "example".into(),
+        lhs: Term::Int(1),
+        rhs: Term::Int(2),
+        steps: vec![ProofStep {
+            axiom: "assumption".into(),
+            reverse: true,
+            path: vec![],
+            substitution: Substitution::from([("y".into(), Term::Int(1))]),
+        }],
+    };
+
+    assert!(verify_proof(std::slice::from_ref(&equation), &proof).is_err());
+    proof.steps[0].substitution.insert("x".into(), Term::Int(2));
+
+    assert!(verify_proof(&[equation], &proof).is_ok());
+}
+
