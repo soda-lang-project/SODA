@@ -115,3 +115,25 @@ fn binds_variables_on_both_sides_even_in_reverse() {
     assert!(verify_proof(&[equation], &proof).is_ok());
 }
 
+#[test]
+fn repeated_variables_are_constraints() {
+    let equation = Equation {
+        name: "same".into(),
+        lhs: app("pair", vec![var("x"), var("x")]),
+        rhs: Term::Bool(true),
+    };
+    let proof = Proof {
+        name: "false".into(),
+        lhs: app("pair", vec![Term::Int(1), Term::Int(2)]),
+        rhs: Term::Bool(true),
+        steps: vec![ProofStep {
+            axiom: "same".into(),
+            reverse: false,
+            path: vec![],
+            substitution: Substitution::from([("x".into(), Term::Int(1))]),
+        }],
+    };
+
+    assert!(verify_proof(&[equation], &proof).is_err());
+}
+
