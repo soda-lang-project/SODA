@@ -124,3 +124,30 @@ fn fresh_names_cannot_capture_adversarial_input_variable_names() {
     }
 }
 
+#[test]
+fn excludes_guards_and_reports_interpretation_limits() {
+    let rules = vec![
+        rule("one", a("f", vec![v("x")]), Term::Int(1)),
+        Rule {
+            condition: Some(Term::Bool(true)),
+            ..rule("two", a("f", vec![v("x")]), Term::Int(2))
+        },
+    ];
+    let report = critical_pairs(&rules).unwrap();
+
+    assert!(report.pairs.is_empty());
+    assert_eq!(report.excluded_conditional_rules, vec!["two"]);
+    assert!(
+        report
+            .limitations
+            .iter()
+            .any(|limitation| limitation.contains("builtin"))
+    );
+    assert!(
+        report
+            .limitations
+            .iter()
+            .any(|limitation| limitation.contains("confluence"))
+    );
+}
+
