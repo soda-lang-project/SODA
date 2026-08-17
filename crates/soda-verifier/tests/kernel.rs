@@ -316,3 +316,47 @@ fn term_depth_limit_is_conservative_and_checked_iteratively() {
     assert!(verify_proof(&[equation], &proof).is_err());
 }
 
+#[test]
+fn binder_unification_and_certificates_preserve_scope() {
+    let name = |n: &str| Term::Name(n.into());
+    let binder = |n: &str, body| Term::Binder {
+        parameter: n.into(),
+        sort: "Expr".into(),
+        body: Box::new(body),
+    };
+    let left = binder("x", name("x"));
+    let right = binder("y", name("y"));
+
+    assert!(unify(&left, &right).is_some());
+    assert!(unify(&binder("x", var("body")), &right).is_none());
+    assert!(
+        verify_proof(
+            &[],
+            &Proof {
+                name: "alpha".into(),
+                lhs: left.clone(),
+                rhs: right,
+                steps: vec![]
+            }
+        )
+        .is_ok()
+    );
+    let axiom = Equation {
+        name: "free_names".into(),
+        lhs: name("x"),
+        rhs: name("z"),
+    };
+    let forged = Proof {
+        name: "escape".into(),
+        lhs: left,
+        rhs: binder("x", name("z")),
+        steps: vec![ProofStep {
+            axiom: "free_names".into(),
+            reverse: false,
+            path: vec![0],
+            substitution: Substitution::new(),
+        }],
+    };
+
+    assert!(verify_proof(&[axiom], &forged).is_err());
+}
