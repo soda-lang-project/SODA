@@ -266,3 +266,20 @@ fn clause_names_share_the_declaration_namespace_and_existentials_are_allowed() {
     assert!(validate_module(&module).is_err());
 }
 
+#[test]
+fn rejects_literal_rule_heads() {
+    for lhs in [Term::Int(0), Term::Bool(false)] {
+        let module = Module {
+            rules: vec![Rule {
+                name: "literal".into(),
+                lhs,
+                rhs: Term::Int(1),
+                condition: None,
+            }],
+            ..Module::default()
+        };
+
+        assert!(validate_module(&module).is_err());
+    }
+}
+
