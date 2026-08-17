@@ -151,3 +151,18 @@ fn excludes_guards_and_reports_interpretation_limits() {
     );
 }
 
+#[test]
+fn rejects_unsafe_and_duplicate_rules_before_analysis() {
+    assert!(critical_pairs(&[rule("unsafe", a("f", vec![v("x")]), v("y"))]).is_err());
+    assert!(critical_pairs(&[rule("variable", v("x"), Term::Int(0))]).is_err());
+    let valid = rule("duplicate", a("f", vec![v("x")]), v("x"));
+
+    assert!(critical_pairs(&[valid.clone(), valid]).is_err());
+    let guarded = Rule {
+        condition: Some(v("y")),
+        ..rule("guard", a("f", vec![v("x")]), v("x"))
+    };
+
+    assert!(critical_pairs(&[guarded]).is_err());
+}
+
