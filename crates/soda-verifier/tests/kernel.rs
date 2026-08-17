@@ -193,3 +193,23 @@ fn validates_rule_and_condition_scope() {
     assert!(validate_module(&module).is_err());
 }
 
+#[test]
+fn termination_analysis_is_conservative_about_duplication_and_conditions() {
+    let mut rule = Rule {
+        name: "reduce".into(),
+        lhs: app("f", vec![var("x")]),
+        rhs: var("x"),
+        condition: None,
+    };
+
+    assert!(analyze_termination(&[rule.clone()]).proven);
+    rule.condition = Some(Term::Bool(true));
+
+    assert!(!analyze_termination(&[rule.clone()]).proven);
+    rule.condition = None;
+    rule.lhs = app("f", vec![app("g", vec![var("x")])]);
+    rule.rhs = app("pair", vec![var("x"), var("x")]);
+
+    assert!(!analyze_termination(&[rule]).proven);
+}
+
