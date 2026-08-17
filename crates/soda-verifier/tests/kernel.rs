@@ -283,3 +283,36 @@ fn rejects_literal_rule_heads() {
     }
 }
 
+#[test]
+fn term_depth_limit_is_conservative_and_checked_iteratively() {
+    fn nested(depth: usize) -> Term {
+        (0..depth).fold(Term::Int(0), |term, _| app("f", vec![term]))
+    }
+    let module = Module {
+        evaluations: vec![nested(256)],
+        ..Module::default()
+    };
+
+    assert!(validate_module(&module).is_ok());
+    let module = Module {
+        queries: vec![nested(257)],
+        ..Module::default()
+    };
+    let error = validate_module(&module).unwrap_err();
+
+    assert!(error.message.contains("depth limit"));
+    let equation = Equation {
+        name: "deep".into(),
+        lhs: nested(2048),
+        rhs: Term::Int(0),
+    };
+    let proof = Proof {
+        name: "reflexive".into(),
+        lhs: Term::Int(0),
+        rhs: Term::Int(0),
+        steps: vec![],
+    };
+
+    assert!(verify_proof(&[equation], &proof).is_err());
+}
+
