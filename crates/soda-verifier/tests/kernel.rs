@@ -213,3 +213,22 @@ fn termination_analysis_is_conservative_about_duplication_and_conditions() {
     assert!(!analyze_termination(&[rule]).proven);
 }
 
+#[test]
+fn unification_composes_bindings_and_checks_occurs() {
+    let left = app("pair", vec![var("x"), var("y")]);
+    let right = app("pair", vec![var("y"), Term::Int(3)]);
+    let substitution = unify(&left, &right).unwrap();
+
+    assert_eq!(
+        left.substitute(&substitution),
+        right.substitute(&substitution)
+    );
+    for value in substitution.values() {
+        assert_eq!(value.substitute(&substitution), *value);
+    }
+
+    assert!(unify(&var("x"), &app("f", vec![var("x")])).is_none());
+    assert!(unify(&app("f", vec![]), &app("f", vec![Term::Int(1)])).is_none());
+    assert!(unify(&Term::Int(1), &Term::Int(2)).is_none());
+}
+
