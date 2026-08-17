@@ -95,3 +95,32 @@ fn repeated_variables_enforce_equality_during_overlap_unification() {
     assert!(critical_pairs(&rules).unwrap().pairs.is_empty());
 }
 
+#[test]
+fn fresh_names_cannot_capture_adversarial_input_variable_names() {
+    let rules = vec![
+        rule(
+            "first",
+            a("f", vec![v("__soda_inner_0")]),
+            a("g", vec![v("__soda_inner_0")]),
+        ),
+        rule(
+            "second",
+            a("f", vec![a("h", vec![v("__soda_outer_0")])]),
+            v("__soda_outer_0"),
+        ),
+    ];
+    let report = critical_pairs(&rules).unwrap();
+
+    assert_eq!(report.pairs.len(), 2);
+
+    for pair in report.pairs {
+        let original = rules
+            .iter()
+            .find(|rule| rule.name == pair.outer_rule)
+            .unwrap();
+        let substitution = match_term(&original.lhs, &pair.source).unwrap();
+
+        assert_eq!(original.rhs.substitute(&substitution), pair.outer_reduct);
+    }
+}
+
