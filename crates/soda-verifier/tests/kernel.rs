@@ -232,3 +232,37 @@ fn unification_composes_bindings_and_checks_occurs() {
     assert!(unify(&Term::Int(1), &Term::Int(2)).is_none());
 }
 
+#[test]
+fn clause_names_share_the_declaration_namespace_and_existentials_are_allowed() {
+    let clause = Clause {
+        name: "exists".into(),
+        conclusion: app("exists", vec![]),
+        premises: vec![app("p", vec![var("witness")])],
+    };
+    let mut module = Module {
+        clauses: vec![clause.clone()],
+        ..Module::default()
+    };
+
+    assert!(validate_module(&module).is_ok());
+    module.clauses.push(clause);
+
+    assert!(validate_module(&module).is_err());
+    module.clauses.pop();
+    module.equations.push(Equation {
+        name: "exists".into(),
+        lhs: Term::Int(1),
+        rhs: Term::Int(1),
+    });
+
+    assert!(validate_module(&module).is_err());
+    module.equations.clear();
+    module.clauses[0].conclusion = var("x");
+
+    assert!(validate_module(&module).is_err());
+    module.clauses[0].conclusion = app("exists", vec![]);
+    module.queries.push(app("", vec![]));
+
+    assert!(validate_module(&module).is_err());
+}
+
