@@ -67,3 +67,17 @@ fn root_overlaps_standardize_apart_before_occurs_check() {
     }
 }
 
+#[test]
+fn includes_proper_self_overlaps_but_discards_trivial_root() {
+    let rules = vec![rule(
+        "nested",
+        a("f", vec![a("f", vec![v("x")])]),
+        a("g", vec![v("x")]),
+    )];
+    let pair = only_pair_at(&rules, &[0]);
+
+    assert_eq!(pair.outer_rule, "nested");
+    assert_eq!(pair.inner_rule, "nested");
+    assert_ne!(pair.outer_reduct, pair.inner_reduct);
+}
+
