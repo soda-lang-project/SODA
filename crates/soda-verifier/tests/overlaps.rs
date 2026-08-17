@@ -81,3 +81,17 @@ fn includes_proper_self_overlaps_but_discards_trivial_root() {
     assert_ne!(pair.outer_reduct, pair.inner_reduct);
 }
 
+#[test]
+fn repeated_variables_enforce_equality_during_overlap_unification() {
+    let rules = vec![
+        rule("same", a("f", vec![v("x"), v("x")]), Term::Bool(true)),
+        rule(
+            "different",
+            a("f", vec![Term::Int(1), Term::Int(2)]),
+            Term::Bool(false),
+        ),
+    ];
+
+    assert!(critical_pairs(&rules).unwrap().pairs.is_empty());
+}
+
