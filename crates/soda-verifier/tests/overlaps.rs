@@ -166,3 +166,15 @@ fn rejects_unsafe_and_duplicate_rules_before_analysis() {
     assert!(critical_pairs(&[guarded]).is_err());
 }
 
+#[test]
+fn finds_nested_literal_overlap_and_skips_variable_positions() {
+    let rules = vec![
+        rule(
+            "outer",
+            a("f", vec![a("g", vec![Term::Int(0)]), v("x")]),
+            v("x"),
+        ),
+        rule("zero", a("g", vec![Term::Int(0)]), Term::Int(1)),
+    ];
+    only_pair_at(&rules, &[0]);
+}
