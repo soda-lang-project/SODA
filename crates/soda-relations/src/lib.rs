@@ -117,6 +117,10 @@ impl Relations {
         })
     }
 
+    pub fn clause_detail(&self, name: &str) -> Option<&ClauseDetail> {
+        self.details.get(name)
+    }
+
     fn is_computed_value(&self, term: &Term) -> bool {
         let mut pending = vec![term];
         while let Some(term) = pending.pop() {
@@ -291,3 +295,6 @@ struct Search<'a> {
     used: BTreeSet<String>,
 }
 
+pub fn answer_matches(query: &Term, answer: &Answer) -> bool {
+    match_term(query, &answer.term).is_some() && answer.term == answer.derivation.conclusion
+}
