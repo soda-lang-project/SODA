@@ -204,3 +204,33 @@ fn freshness_conditions_check_bound_names_and_unknown_metavariables() {
     assert!(result.answers.is_empty());
 }
 
+#[test]
+fn malformed_clause_metadata_and_unsafe_conditions_are_rejected() {
+    let base = module(Term::Bool(true));
+    let mut unknown = base.clone();
+    unknown.clause_details[0].clause = "missing".into();
+
+    assert!(Relations::from_module(&unknown).is_err());
+    let mut duplicate = base.clone();
+    duplicate
+        .clause_details
+        .push(duplicate.clause_details[0].clone());
+
+    assert!(Relations::from_module(&duplicate).is_err());
+    let mut wrong_count = base.clone();
+    wrong_count.clause_details[0].premise_labels.push(None);
+
+    assert!(Relations::from_module(&wrong_count).is_err());
+    let mut labels = base.clone();
+    labels.clauses[0].premises = vec![app("a", vec![]), app("b", vec![])];
+    labels.clause_details[0].premise_labels = vec![Some("same".into()), Some("same".into())];
+
+    assert!(Relations::from_module(&labels).is_err());
+    labels.clause_details[0].premise_labels = vec![Some("".into()), None];
+
+    assert!(Relations::from_module(&labels).is_err());
+    assert!(
+        Relations::from_module(&module(app("eq", vec![var("unbound"), Term::Int(1)]))).is_err()
+    );
+}
+
