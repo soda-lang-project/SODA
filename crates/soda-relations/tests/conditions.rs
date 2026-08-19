@@ -78,3 +78,48 @@ fn true_and_false_conditions_filter_derivations_and_reject_forgeries() {
     );
 }
 
+#[test]
+fn unknown_erroneous_and_budget_exhausted_conditions_are_incomplete() {
+    for condition in [
+        app("undefined", vec![]),
+        Term::Int(1),
+        app("div", vec![Term::Int(1), Term::Int(0)]),
+    ] {
+        let result = search(&module(condition), &SearchConfig::default());
+
+        assert!(!result.complete);
+        assert!(result.answers.is_empty());
+    }
+
+    let condition = arithmetic_condition();
+    let result = search(
+        &module(condition),
+        &SearchConfig {
+            max_attempts: 2,
+            ..SearchConfig::default()
+        },
+    );
+
+    assert!(!result.complete);
+    assert!(result.answers.is_empty());
+    assert_eq!(result.attempts, 2);
+    let mut divergent = module(app("loop", vec![]));
+    divergent.rules.push(Rule {
+        name: "recur".into(),
+        lhs: app("loop", vec![]),
+        rhs: app("loop", vec![]),
+        condition: None,
+    });
+    let result = search(
+        &divergent,
+        &SearchConfig {
+            max_attempts: 4,
+            ..SearchConfig::default()
+        },
+    );
+
+    assert!(!result.complete);
+    assert!(result.answers.is_empty());
+    assert_eq!(result.attempts, 4);
+}
+
