@@ -161,3 +161,46 @@ fn conditions_use_bindings_from_all_named_premises_and_semantic_rules() {
     assert!(relations.verify(&forged).is_err());
 }
 
+#[test]
+fn freshness_conditions_check_bound_names_and_unknown_metavariables() {
+    let x = Term::Name("x".into());
+    let bound = Term::Binder {
+        parameter: "x".into(),
+        sort: "Expr".into(),
+        body: Box::new(x.clone()),
+    };
+
+    for (body, expected) in [(x.clone(), 0), (bound, 1)] {
+        let typed_binding = soda_sorts::requires_sort_check(&body);
+        let mut definition = module(app("fresh", vec![x.clone(), body]));
+
+        if typed_binding {
+            definition.sorts.push(soda_ast::SortDecl {
+                name: "Expr".into(),
+                inductive: false,
+            });
+            definition.judgments.push(soda_ast::JudgmentDecl {
+                name: "accepted".into(),
+                arguments: vec![],
+                kind: soda_ast::JudgmentKind::Relation,
+            });
+        }
+
+        let result = search(&definition, &SearchConfig::default());
+
+        assert!(result.complete);
+        assert_eq!(result.answers.len(), expected);
+    }
+
+    let mut open = module(app("fresh", vec![x, var("body")]));
+    open.clauses[0].conclusion = app("accepted", vec![var("body")]);
+    let relations = Relations::from_module(&open).unwrap();
+    let result = relations.search(
+        &app("accepted", vec![var("unknown")]),
+        &SearchConfig::default(),
+    );
+
+    assert!(!result.complete);
+    assert!(result.answers.is_empty());
+}
+
