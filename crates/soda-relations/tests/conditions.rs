@@ -123,3 +123,41 @@ fn unknown_erroneous_and_budget_exhausted_conditions_are_incomplete() {
     assert_eq!(result.attempts, 4);
 }
 
+#[test]
+fn conditions_use_bindings_from_all_named_premises_and_semantic_rules() {
+    let mut module = module(app("positive", vec![var("value")]));
+    module.clauses[0]
+        .premises
+        .push(app("source", vec![var("value")]));
+    module.clause_details[0]
+        .premise_labels
+        .push(Some("witness".into()));
+    module.clauses.push(Clause {
+        name: "source_fact".into(),
+        conclusion: app("source", vec![Term::Int(2)]),
+        premises: vec![],
+    });
+    module.rules.push(Rule {
+        name: "is_positive".into(),
+        lhs: app("positive", vec![var("n")]),
+        rhs: app("gt", vec![var("n"), Term::Int(0)]),
+        condition: None,
+    });
+    let relations = Relations::from_module(&module).unwrap();
+
+    assert_eq!(
+        relations.clause_detail("checked").unwrap().premise_labels,
+        vec![Some("witness".into())]
+    );
+    let result = verified_search(&relations);
+
+    assert_eq!(
+        result.answers[0].derivation.substitution["value"],
+        Term::Int(2)
+    );
+    let mut forged = result.answers[0].derivation.clone();
+    forged.substitution.insert("value".into(), Term::Int(-2));
+
+    assert!(relations.verify(&forged).is_err());
+}
+
