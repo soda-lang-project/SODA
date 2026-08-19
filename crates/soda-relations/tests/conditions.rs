@@ -234,3 +234,47 @@ fn malformed_clause_metadata_and_unsafe_conditions_are_rejected() {
     );
 }
 
+#[test]
+fn computed_bindings_feed_later_premises_and_reject_forged_results() {
+    let mut model = module(Term::Bool(true));
+    model.clauses[0].conclusion = app("accepted", vec![var("result")]);
+    model.clauses[0].premises = vec![
+        app("seed", vec![var("x")]),
+        app("next", vec![var("mid"), var("result")]),
+    ];
+    model.clauses.extend([
+        Clause {
+            name: "seed".into(),
+            conclusion: app("seed", vec![Term::Int(2)]),
+            premises: vec![],
+        },
+        Clause {
+            name: "next".into(),
+            conclusion: app("next", vec![Term::Int(3), Term::Int(6)]),
+            premises: vec![],
+        },
+    ]);
+    model.clause_details[0].premise_labels = vec![None, None];
+    model.clause_details[0].bindings = vec![soda_ast::ComputedBinding {
+        before_premise: 1,
+        pattern: var("mid"),
+        value: app("add", vec![var("x"), Term::Int(1)]),
+    }];
+    let relations = Relations::from_module(&model).unwrap();
+    let result = relations.search(
+        &app("accepted", vec![var("answer")]),
+        &SearchConfig::default(),
+    );
+    assert!(result.complete);
+    assert_eq!(result.answers.len(), 1);
+    assert_eq!(result.answers[0].term, app("accepted", vec![Term::Int(6)]));
+    relations.verify(&result.answers[0].derivation).unwrap();
+    let mut forged = result.answers[0].derivation.clone();
+    forged.substitution.insert("mid".into(), Term::Int(4));
+    assert!(relations.verify(&forged).is_err());
+    let mut forged = result.answers[0].derivation.clone();
+    forged.substitution.insert("x".into(), Term::Int(99));
+    forged.premises[0].conclusion = app("seed", vec![Term::Int(99)]);
+    assert!(relations.verify(&forged).is_err());
+}
+
