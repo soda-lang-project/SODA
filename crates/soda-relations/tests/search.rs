@@ -75,3 +75,26 @@ fn shared_variables_constrain_later_premises_and_backtracking() {
     relations.verify(&result.answers[0].derivation).unwrap();
 }
 
+#[test]
+fn premise_only_existential_variables_are_shared_and_instantiated() {
+    let relations = Relations::new(vec![
+        clause(
+            "exists",
+            a("exists", vec![]),
+            vec![a("p", vec![v("witness")]), a("q", vec![v("witness")])],
+        ),
+        fact("p3", "p", 3),
+        fact("q3", "q", 3),
+    ])
+    .unwrap();
+    let result = relations.search(&a("exists", vec![]), &SearchConfig::default());
+
+    assert!(result.complete);
+    assert_eq!(result.answers.len(), 1);
+    assert_eq!(
+        result.answers[0].derivation.substitution["witness"],
+        Term::Int(3)
+    );
+    relations.verify(&result.answers[0].derivation).unwrap();
+}
+
