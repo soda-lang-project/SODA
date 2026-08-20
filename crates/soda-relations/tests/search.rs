@@ -130,3 +130,18 @@ fn recursive_calls_and_user_variable_names_cannot_capture_fresh_variables() {
     assert!(!result.complete);
 }
 
+#[test]
+fn empty_and_finitely_failed_search_are_complete() {
+    let empty = Relations::new(vec![]).unwrap();
+    let result = empty.search(&a("p", vec![]), &SearchConfig::default());
+
+    assert!(result.complete);
+    assert!(result.answers.is_empty());
+    assert_eq!(result.attempts, 0);
+    let relations = Relations::new(vec![fact("p", "p", 1)]).unwrap();
+    let result = relations.search(&a("q", vec![Term::Int(1)]), &SearchConfig::default());
+
+    assert!(result.complete);
+    assert!(result.answers.is_empty());
+}
+
