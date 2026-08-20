@@ -315,3 +315,21 @@ fn computed_binding_failures_are_incomplete_and_mismatch_is_exhaustive() {
     assert!(stuck.answers.is_empty());
 }
 
+#[test]
+fn checker_recomputes_a_trailing_binding_without_trusting_substitution() {
+    let mut model = module(Term::Bool(true));
+    model.clauses[0].conclusion = app("accepted", vec![var("out")]);
+    model.clause_details[0].bindings = vec![soda_ast::ComputedBinding {
+        before_premise: 0,
+        pattern: var("out"),
+        value: app("add", vec![Term::Int(2), Term::Int(3)]),
+    }];
+    let relations = Relations::from_module(&model).unwrap();
+    let result = relations.search(&app("accepted", vec![var("q")]), &SearchConfig::default());
+    relations.verify(&result.answers[0].derivation).unwrap();
+    let mut forged = result.answers[0].derivation.clone();
+    forged.conclusion = app("accepted", vec![Term::Int(6)]);
+    forged.substitution.insert("out".into(), Term::Int(6));
+    let error = relations.verify(&forged).unwrap_err();
+    assert!(error.contains("computed binding"), "{error}");
+}
