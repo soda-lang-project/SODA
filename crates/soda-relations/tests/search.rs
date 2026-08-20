@@ -52,3 +52,26 @@ fn skipped_heads_keep_attempt_budgets_and_fresh_names() {
     assert!(limited.answers.is_empty());
 }
 
+#[test]
+fn shared_variables_constrain_later_premises_and_backtracking() {
+    let relations = Relations::new(vec![
+        clause(
+            "both",
+            a("both", vec![v("x")]),
+            vec![a("p", vec![v("x")]), a("q", vec![v("x")])],
+        ),
+        fact("p1", "p", 1),
+        fact("p2", "p", 2),
+        fact("q2", "q", 2),
+    ])
+    .unwrap();
+    let query = a("both", vec![v("answer")]);
+    let result = relations.search(&query, &SearchConfig::default());
+
+    assert!(result.complete);
+    assert_eq!(result.answers.len(), 1);
+    assert_eq!(result.answers[0].bindings["answer"], Term::Int(2));
+    assert!(answer_matches(&query, &result.answers[0]));
+    relations.verify(&result.answers[0].derivation).unwrap();
+}
+
