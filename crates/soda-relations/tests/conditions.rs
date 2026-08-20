@@ -278,3 +278,40 @@ fn computed_bindings_feed_later_premises_and_reject_forged_results() {
     assert!(relations.verify(&forged).is_err());
 }
 
+#[test]
+fn computed_binding_failures_are_incomplete_and_mismatch_is_exhaustive() {
+    let mut model = module(Term::Bool(true));
+    model.clauses[0].conclusion = app("accepted", vec![var("out")]);
+    model.clause_details[0].bindings = vec![soda_ast::ComputedBinding {
+        before_premise: 0,
+        pattern: var("out"),
+        value: app("add", vec![Term::Int(2), Term::Int(3)]),
+    }];
+    let relations = Relations::from_module(&model).unwrap();
+    let result = relations.search(
+        &app("accepted", vec![Term::Int(4)]),
+        &SearchConfig::default(),
+    );
+    assert!(result.complete);
+    assert!(result.answers.is_empty());
+    let limited = relations.search(
+        &app("accepted", vec![var("q")]),
+        &SearchConfig {
+            max_attempts: 1,
+            ..SearchConfig::default()
+        },
+    );
+    assert!(!limited.complete);
+    assert!(limited.answers.is_empty());
+    model.clause_details[0].bindings[0].value = app("add", vec![var("input"), Term::Int(3)]);
+    let relations = Relations::from_module(&model).unwrap();
+    let open = relations.search(&app("accepted", vec![var("q")]), &SearchConfig::default());
+    assert!(!open.complete);
+    assert!(open.answers.is_empty());
+    model.clause_details[0].bindings[0].value = app("div", vec![Term::Int(1), Term::Int(0)]);
+    let relations = Relations::from_module(&model).unwrap();
+    let stuck = relations.search(&app("accepted", vec![var("q")]), &SearchConfig::default());
+    assert!(!stuck.complete);
+    assert!(stuck.answers.is_empty());
+}
+
