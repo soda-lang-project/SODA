@@ -98,3 +98,35 @@ fn premise_only_existential_variables_are_shared_and_instantiated() {
     relations.verify(&result.answers[0].derivation).unwrap();
 }
 
+#[test]
+fn recursive_calls_and_user_variable_names_cannot_capture_fresh_variables() {
+    let relations = Relations::new(vec![
+        clause("base", a("nat", vec![a("zero", vec![])]), vec![]),
+        clause(
+            "successor",
+            a("nat", vec![a("s", vec![v("_soda_internal_0")])]),
+            vec![a("nat", vec![v("_soda_internal_0")])],
+        ),
+    ])
+    .unwrap();
+    let query = a(
+        "nat",
+        vec![a("s", vec![a("s", vec![v("_soda_internal_1")])])],
+    );
+    let result = relations.search(
+        &query,
+        &SearchConfig {
+            max_depth: 3,
+            ..SearchConfig::default()
+        },
+    );
+
+    assert!(!result.answers.is_empty());
+    for answer in &result.answers {
+        assert!(answer_matches(&query, answer));
+        relations.verify(&answer.derivation).unwrap();
+    }
+
+    assert!(!result.complete);
+}
+
