@@ -145,3 +145,33 @@ fn empty_and_finitely_failed_search_are_complete() {
     assert!(result.answers.is_empty());
 }
 
+#[test]
+fn cycles_and_zero_budgets_are_incomplete_without_false_answers() {
+    let relations = Relations::new(vec![clause(
+        "loop",
+        a("p", vec![v("x")]),
+        vec![a("p", vec![v("x")])],
+    )])
+    .unwrap();
+
+    for config in [
+        SearchConfig {
+            max_depth: 3,
+            ..SearchConfig::default()
+        },
+        SearchConfig {
+            max_attempts: 0,
+            ..SearchConfig::default()
+        },
+        SearchConfig {
+            max_answers: 0,
+            ..SearchConfig::default()
+        },
+    ] {
+        let result = relations.search(&a("p", vec![Term::Int(1)]), &config);
+
+        assert!(!result.complete);
+        assert!(result.answers.is_empty());
+    }
+}
+
