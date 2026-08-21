@@ -245,3 +245,11 @@ fn rejects_forged_and_incomplete_derivations() {
     );
 }
 
+#[test]
+fn validates_names_and_constructor_heads() {
+    assert!(Relations::new(vec![clause("", a("p", vec![]), vec![])]).is_err());
+    assert!(Relations::new(vec![clause("bad", v("x"), vec![])]).is_err());
+    assert!(Relations::new(vec![clause("bad", a("", vec![]), vec![])]).is_err());
+    assert!(Relations::new(vec![clause("bad", a("p", vec![v("")]), vec![])]).is_err());
+}
+
