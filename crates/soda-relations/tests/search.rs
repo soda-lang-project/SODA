@@ -253,3 +253,33 @@ fn validates_names_and_constructor_heads() {
     assert!(Relations::new(vec![clause("bad", a("p", vec![v("")]), vec![])]).is_err());
 }
 
+#[test]
+fn later_premises_instantiate_aliases_in_prior_proof_trees() {
+    let relations = Relations::new(vec![
+        clause(
+            "join",
+            a("pair", vec![v("x"), v("y")]),
+            vec![a("same", vec![v("x"), v("y")]), a("p", vec![v("y")])],
+        ),
+        clause("reflexive", a("same", vec![v("z"), v("z")]), vec![]),
+        fact("p7", "p", 7),
+    ])
+    .unwrap();
+    let result = relations.search(
+        &a("pair", vec![v("left"), v("right")]),
+        &SearchConfig::default(),
+    );
+
+    assert!(result.complete);
+    assert_eq!(result.answers.len(), 1);
+    let answer = &result.answers[0];
+
+    assert_eq!(answer.bindings["left"], Term::Int(7));
+    assert_eq!(answer.bindings["right"], Term::Int(7));
+    assert_eq!(
+        answer.derivation.premises[0].conclusion,
+        a("same", vec![Term::Int(7), Term::Int(7)])
+    );
+    relations.verify(&answer.derivation).unwrap();
+}
+
