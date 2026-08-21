@@ -175,3 +175,19 @@ fn cycles_and_zero_budgets_are_incomplete_without_false_answers() {
     }
 }
 
+#[test]
+fn answer_cap_returns_checked_answers_and_reports_incompleteness() {
+    let relations = Relations::new(vec![fact("p1", "p", 1), fact("p2", "p", 2)]).unwrap();
+    let result = relations.search(
+        &a("p", vec![v("x")]),
+        &SearchConfig {
+            max_answers: 1,
+            ..SearchConfig::default()
+        },
+    );
+
+    assert_eq!(result.answers.len(), 1);
+    assert!(!result.complete);
+    relations.verify(&result.answers[0].derivation).unwrap();
+}
+
