@@ -191,3 +191,17 @@ fn answer_cap_returns_checked_answers_and_reports_incompleteness() {
     relations.verify(&result.answers[0].derivation).unwrap();
 }
 
+#[test]
+fn repeated_query_variables_are_consistency_constraints() {
+    let relations = Relations::new(vec![clause(
+        "unequal",
+        a("pair", vec![Term::Int(1), Term::Int(2)]),
+        vec![],
+    )])
+    .unwrap();
+    let result = relations.search(&a("pair", vec![v("x"), v("x")]), &SearchConfig::default());
+
+    assert!(result.complete);
+    assert!(result.answers.is_empty());
+}
+
