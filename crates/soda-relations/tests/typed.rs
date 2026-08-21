@@ -136,3 +136,66 @@ fn typed_schema_rejects_invalid_definitions_and_infers_branch_bindings() {
     relations.verify(&result.answers[0].derivation).unwrap();
 }
 
+#[test]
+fn proof_tree_cannot_assign_one_runtime_metavariable_conflicting_sorts() {
+    let module = Module {
+        judgments: vec![
+            judgment("root", &[]),
+            judgment("left", &[]),
+            judgment("right", &[]),
+            judgment("integer", &["Int"]),
+            judgment("boolean", &["Bool"]),
+        ],
+        clauses: vec![
+            clause(
+                "root_rule",
+                app("root", vec![]),
+                vec![app("left", vec![]), app("right", vec![])],
+            ),
+            clause(
+                "left_rule",
+                app("left", vec![]),
+                vec![app("integer", vec![var("witness")])],
+            ),
+            clause(
+                "right_rule",
+                app("right", vec![]),
+                vec![app("boolean", vec![var("witness")])],
+            ),
+            clause("integer_fact", app("integer", vec![var("x")]), vec![]),
+            clause("boolean_fact", app("boolean", vec![var("x")]), vec![]),
+        ],
+        ..Module::default()
+    };
+    let relations = Relations::from_module(&module).unwrap();
+    let result = relations
+        .search_checked(&app("root", vec![]), &SearchConfig::default())
+        .unwrap();
+
+    assert_eq!(result.answers.len(), 1);
+    relations.verify(&result.answers[0].derivation).unwrap();
+    let mut forged = result.answers[0].derivation.clone();
+    fn merge_metavariables(proof: &mut Derivation) {
+        let names = proof
+            .conclusion
+            .variables()
+            .into_iter()
+            .chain(proof.substitution.values().flat_map(Term::variables))
+            .collect::<std::collections::BTreeSet<_>>();
+        let substitution = names
+            .into_iter()
+            .map(|name| (name, var("shared")))
+            .collect();
+        proof.conclusion = proof.conclusion.substitute(&substitution);
+        for term in proof.substitution.values_mut() {
+            *term = term.substitute(&substitution);
+        }
+
+        for child in &mut proof.premises {
+            merge_metavariables(child);
+        }
+    }
+    merge_metavariables(&mut forged);
+
+    assert!(relations.verify(&forged).is_err());
+}
