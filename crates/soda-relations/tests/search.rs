@@ -205,3 +205,43 @@ fn repeated_query_variables_are_consistency_constraints() {
     assert!(result.answers.is_empty());
 }
 
+#[test]
+fn rejects_forged_and_incomplete_derivations() {
+    let relations = Relations::new(vec![
+        clause("both", a("both", vec![v("x")]), vec![a("p", vec![v("x")])]),
+        fact("p1", "p", 1),
+    ])
+    .unwrap();
+    let answer = relations
+        .search(&a("both", vec![Term::Int(1)]), &SearchConfig::default())
+        .answers
+        .remove(0);
+    let proof = answer.derivation;
+    let mut forged = proof.clone();
+    forged.premises.clear();
+
+    assert!(relations.verify(&forged).is_err());
+    let mut forged = proof.clone();
+    forged.substitution.clear();
+
+    assert!(relations.verify(&forged).is_err());
+    let mut forged = proof.clone();
+    forged.premises[0].conclusion = a("p", vec![Term::Int(2)]);
+
+    assert!(relations.verify(&forged).is_err());
+    let mut forged = proof;
+    forged.rule = "invented".into();
+
+    assert!(relations.verify(&forged).is_err());
+    assert!(
+        relations
+            .verify(&Derivation {
+                rule: "both".into(),
+                conclusion: a("both", vec![Term::Int(9)]),
+                substitution: Substitution::from([("x".into(), Term::Int(9))]),
+                premises: vec![]
+            })
+            .is_err()
+    );
+}
+
