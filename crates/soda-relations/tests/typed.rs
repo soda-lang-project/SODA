@@ -84,3 +84,33 @@ fn typed_derivation_rejects_boolean_substitution_for_integer_metavariable() {
     relations.verify(&valid).unwrap();
 }
 
+#[test]
+fn checked_search_reports_invalid_query_and_legacy_search_is_incomplete() {
+    let relations = Relations::from_module(&typed()).unwrap();
+
+    for query in [
+        app("p", vec![Term::Bool(true)]),
+        app("p", vec![]),
+        app("unknown", vec![Term::Int(3)]),
+    ] {
+        assert!(
+            relations
+                .search_checked(&query, &SearchConfig::default())
+                .is_err()
+        );
+        let result = relations.search(&query, &SearchConfig::default());
+
+        assert!(!result.complete);
+        assert!(result.answers.is_empty());
+        assert_eq!(result.attempts, 0);
+    }
+
+    for query in [app("p", vec![Term::Int(7)]), app("p", vec![var("answer")])] {
+        let result = relations
+            .search_checked(&query, &SearchConfig::default())
+            .unwrap();
+
+        support::assert_single_verified_answer(&relations, &result);
+    }
+}
+
