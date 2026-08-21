@@ -64,3 +64,23 @@ fn runtime_binders_cannot_bypass_legacy_schema_checking() {
     assert!(relations.verify(&forged).is_err());
 }
 
+#[test]
+fn typed_derivation_rejects_boolean_substitution_for_integer_metavariable() {
+    let relations = Relations::from_module(&typed()).unwrap();
+    let forged = Derivation {
+        rule: "any_int".into(),
+        conclusion: app("p", vec![Term::Bool(true)]),
+        substitution: Substitution::from([("x".into(), Term::Bool(true))]),
+        premises: vec![],
+    };
+
+    assert!(relations.verify(&forged).is_err());
+    let valid = Derivation {
+        rule: "any_int".into(),
+        conclusion: app("p", vec![Term::Int(3)]),
+        substitution: Substitution::from([("x".into(), Term::Int(3))]),
+        premises: vec![],
+    };
+    relations.verify(&valid).unwrap();
+}
+
