@@ -283,3 +283,28 @@ fn later_premises_instantiate_aliases_in_prior_proof_trees() {
     relations.verify(&answer.derivation).unwrap();
 }
 
+#[test]
+fn intermediate_answer_truncation_never_claims_failed_query_is_complete() {
+    let relations = Relations::new(vec![
+        clause(
+            "both",
+            a("both", vec![v("x")]),
+            vec![a("p", vec![v("x")]), a("q", vec![v("x")])],
+        ),
+        fact("p1", "p", 1),
+        fact("p2", "p", 2),
+        fact("q2", "q", 2),
+    ])
+    .unwrap();
+    let result = relations.search(
+        &a("both", vec![v("answer")]),
+        &SearchConfig {
+            max_answers: 1,
+            ..SearchConfig::default()
+        },
+    );
+    // The cap discards p(2), the only branch that satisfies q; failure is inconclusive.
+
+    assert!(result.answers.is_empty());
+    assert!(!result.complete);
+}
