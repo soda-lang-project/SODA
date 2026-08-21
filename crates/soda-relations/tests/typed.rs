@@ -114,3 +114,25 @@ fn checked_search_reports_invalid_query_and_legacy_search_is_incomplete() {
     }
 }
 
+#[test]
+fn typed_schema_rejects_invalid_definitions_and_infers_branch_bindings() {
+    let mut invalid = typed();
+    invalid.clauses[0].conclusion = app("p", vec![Term::Bool(true)]);
+
+    assert!(Relations::from_module(&invalid).is_err());
+    let mut module = typed();
+    module.judgments.push(judgment("source", &["Int"]));
+    module.clauses[0].premises = vec![app("source", vec![var("x")])];
+    module
+        .clauses
+        .push(clause("three", app("source", vec![Term::Int(3)]), vec![]));
+    let relations = Relations::from_module(&module).unwrap();
+    let result = relations
+        .search_checked(&app("p", vec![var("answer")]), &SearchConfig::default())
+        .unwrap();
+
+    assert!(result.complete);
+    assert_eq!(result.answers[0].bindings["answer"], Term::Int(3));
+    relations.verify(&result.answers[0].derivation).unwrap();
+}
+
