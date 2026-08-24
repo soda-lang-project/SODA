@@ -136,3 +136,40 @@ fn depth_budget_is_graph_distance_and_is_not_a_terminal_claim() {
     assert!(graph.witness(&atom("c")).is_none());
 }
 
+#[test]
+fn witnesses_are_shortest_and_violations_win_over_incompleteness() {
+    let config = Config {
+        max_states: 4,
+        ..Config::default()
+    };
+    let graph = explore(
+        &engine(&[
+            ("long_start", "a", "b"),
+            ("short_start", "a", "c"),
+            ("long_middle", "b", "e"),
+            ("short_finish", "c", "e"),
+            ("more", "e", "f"),
+        ]),
+        &atom("a"),
+        &config,
+    );
+
+    let witness = graph.witness(&atom("e")).unwrap();
+
+    assert_eq!(witness.len(), 2);
+    assert_eq!(witness[0].from, 0);
+    assert_eq!(witness[0].to, witness[1].from);
+    assert_eq!(graph.states[witness[1].to].term, atom("e"));
+    assert!(
+        matches!(graph.reachability(&atom("e")), Reachability::Reachable { witness, .. } if witness.len() == 2)
+    );
+    assert!(
+        matches!(graph.check_invariant(|term| term != &atom("e")), InvariantResult::Violated { witness, .. } if witness.len() == 2)
+    );
+    assert!(!graph.is_complete());
+    assert_eq!(graph.witness(&atom("a")), Some(vec![]));
+    assert!(
+        matches!(graph.check_invariant(|_| false), InvariantResult::Violated { state: 0, witness } if witness.is_empty())
+    );
+}
+
