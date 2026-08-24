@@ -110,3 +110,29 @@ fn state_limit_is_unknown_and_preserves_known_edges() {
     assert_eq!(graph.check_invariant(|_| true), InvariantResult::Unknown);
 }
 
+#[test]
+fn depth_budget_is_graph_distance_and_is_not_a_terminal_claim() {
+    let config = Config {
+        max_depth: 1,
+        ..Config::default()
+    };
+    let graph = explore(
+        &engine(&[("one", "a", "b"), ("two", "b", "c")]),
+        &atom("a"),
+        &config,
+    );
+
+    assert_eq!(graph.states.len(), 2);
+    assert_eq!(graph.states[1].depth, 1);
+    assert_eq!(graph.states[1].status, StateStatus::Incomplete);
+    assert_eq!(
+        graph.incompleteness,
+        vec![Incomplete::DepthLimit { state: 1 }]
+    );
+    assert_eq!(
+        graph.check_invariant(|term| term != &atom("c")),
+        InvariantResult::Unknown
+    );
+    assert!(graph.witness(&atom("c")).is_none());
+}
+
