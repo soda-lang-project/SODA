@@ -252,3 +252,33 @@ fn enumeration_errors_and_limits_are_not_terminal_or_safe() {
     assert_eq!(failed.reachability(&atom("a")), Reachability::Unknown);
 }
 
+#[test]
+fn zero_budgets_are_explicit_and_zero_depth_can_still_be_complete() {
+    let machine = engine(&[]);
+    let empty = explore(
+        &machine,
+        &atom("a"),
+        &Config {
+            max_states: 0,
+            ..Config::default()
+        },
+    );
+
+    assert!(empty.states.is_empty());
+    assert_eq!(
+        empty.incompleteness,
+        vec![Incomplete::StateLimit { state: None }]
+    );
+    assert_eq!(empty.check_invariant(|_| true), InvariantResult::Unknown);
+    let terminal = explore(
+        &machine,
+        &atom("a"),
+        &Config {
+            max_depth: 0,
+            ..Config::default()
+        },
+    );
+
+    assert!(terminal.is_complete());
+    assert_eq!(terminal.states[0].status, StateStatus::Terminal);
+}
