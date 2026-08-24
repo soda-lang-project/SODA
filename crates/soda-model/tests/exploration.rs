@@ -193,3 +193,18 @@ fn direct_discovery_wins_over_a_longer_previously_enqueued_branch() {
     assert_eq!(graph.transitions.len(), 4);
 }
 
+#[test]
+fn contextual_transitions_rebuild_the_entire_state() {
+    let initial = Term::app("box", vec![atom("a")]);
+    let graph = explore(
+        &engine(&[("inside", "a", "b")]),
+        &initial,
+        &Config::default(),
+    );
+
+    assert!(graph.is_complete());
+    assert_eq!(graph.transitions[0].path, vec![0]);
+    assert_eq!(graph.states[1].term, Term::app("box", vec![atom("b")]));
+    assert_eq!(graph.states[1].status, StateStatus::Terminal);
+}
+
