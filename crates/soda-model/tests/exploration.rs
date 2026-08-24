@@ -50,3 +50,34 @@ fn explores_both_choices_in_declaration_order() {
     );
 }
 
+#[test]
+fn finite_cycles_and_self_loops_are_complete_even_at_the_horizon() {
+    let config = Config {
+        max_states: 2,
+        max_depth: 1,
+        ..Config::default()
+    };
+    let graph = explore(
+        &engine(&[
+            ("forward", "a", "b"),
+            ("back", "b", "a"),
+            ("self", "b", "b"),
+        ]),
+        &atom("a"),
+        &config,
+    );
+
+    assert!(graph.is_complete());
+    assert_eq!(graph.states.len(), 2);
+    assert_eq!(graph.transitions.len(), 3);
+    assert_eq!((graph.transitions[1].from, graph.transitions[1].to), (1, 0));
+    assert_eq!((graph.transitions[2].from, graph.transitions[2].to), (1, 1));
+    assert!(
+        graph
+            .states
+            .iter()
+            .all(|state| state.status == StateStatus::Expanded)
+    );
+    assert_eq!(graph.check_invariant(|_| true), InvariantResult::Holds);
+}
+
