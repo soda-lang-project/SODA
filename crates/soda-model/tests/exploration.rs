@@ -81,3 +81,32 @@ fn finite_cycles_and_self_loops_are_complete_even_at_the_horizon() {
     assert_eq!(graph.check_invariant(|_| true), InvariantResult::Holds);
 }
 
+#[test]
+fn state_limit_is_unknown_and_preserves_known_edges() {
+    let config = Config {
+        max_states: 2,
+        ..Config::default()
+    };
+    let graph = explore(
+        &engine(&[
+            ("first", "a", "b"),
+            ("blocked", "a", "c"),
+            ("back", "b", "a"),
+        ]),
+        &atom("a"),
+        &config,
+    );
+
+    assert!(!graph.is_complete());
+    assert_eq!(graph.states.len(), 2);
+    assert_eq!(graph.transitions.len(), 2);
+    assert!(
+        graph
+            .incompleteness
+            .contains(&Incomplete::StateLimit { state: Some(0) })
+    );
+    assert_eq!(graph.states[0].status, StateStatus::Incomplete);
+    assert_eq!(graph.reachability(&atom("c")), Reachability::Unknown);
+    assert_eq!(graph.check_invariant(|_| true), InvariantResult::Unknown);
+}
+
