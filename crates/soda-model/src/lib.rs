@@ -156,5 +156,114 @@ impl Exploration {
         }
     }
 
+    fn mark_incomplete(&mut self, state: usize, reason: Incomplete) {
+        self.states[state].status = StateStatus::Incomplete;
+
+        if !self.incompleteness.contains(&reason) {
+            self.incompleteness.push(reason);
+        }
+    }
 }
 
+/// Explores in BFS order. Budgets limit new states; edges to known states are retained.
+pub fn explore(engine: &Engine, initial: &Term, config: &Config) -> Exploration {
+    let mut graph = Exploration {
+        states: Vec::new(),
+        transitions: Vec::new(),
+        incompleteness: Vec::new(),
+        indices: BTreeMap::new(),
+        parents: Vec::new(),
+    };
+
+    if config.max_states == 0 {
+        graph
+            .incompleteness
+            .push(Incomplete::StateLimit { state: None });
+
+        return graph;
+    }
+
+    graph.indices.insert(initial.clone(), 0);
+    graph.parents.push(None);
+    graph.states.push(State {
+        term: initial.clone(),
+        depth: 0,
+        status: StateStatus::Expanded,
+    });
+    let mut queue = VecDeque::from([0]);
+
+    while let Some(from) = queue.pop_front() {
+        let source = graph.states[from].term.clone();
+        let successors = match engine.successors(&source, &config.evaluation) {
+            Ok(steps) => steps,
+            Err(status) => {
+                graph.mark_incomplete(
+                    from,
+                    Incomplete::Enumeration {
+                        state: from,
+                        status,
+                    },
+                );
+                continue;
+            }
+        };
+
+        if successors.is_empty() {
+            graph.states[from].status = StateStatus::Terminal;
+        }
+
+        for step in successors {
+            let target = if source.at(&step.path) == Some(&step.before) {
+                source.replace(&step.path, step.after)
+            } else {
+                None
+            };
+
+            let Some(target) = target else {
+                graph.mark_incomplete(
+                    from,
+                    Incomplete::InvalidTransition {
+                        state: from,
+                        path: step.path,
+                    },
+                );
+                continue;
+            };
+
+            let to = if let Some(&existing) = graph.indices.get(&target) {
+                existing
+            } else {
+                if graph.states[from].depth >= config.max_depth {
+                    graph.mark_incomplete(from, Incomplete::DepthLimit { state: from });
+                    continue;
+                }
+
+                if graph.states.len() >= config.max_states {
+                    graph.mark_incomplete(from, Incomplete::StateLimit { state: Some(from) });
+                    continue;
+                }
+
+                let index = graph.states.len();
+                graph.indices.insert(target.clone(), index);
+                graph.states.push(State {
+                    term: target,
+                    depth: graph.states[from].depth + 1,
+                    status: StateStatus::Expanded,
+                });
+                graph.parents.push(Some(graph.transitions.len()));
+                queue.push_back(index);
+
+                index
+            };
+
+            graph.transitions.push(Transition {
+                from,
+                to,
+                rule: step.rule,
+                path: step.path,
+            });
+        }
+    }
+
+    graph
+}
