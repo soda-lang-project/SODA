@@ -208,3 +208,16 @@ fn contextual_transitions_rebuild_the_entire_state() {
     assert_eq!(graph.states[1].status, StateStatus::Terminal);
 }
 
+#[test]
+fn duplicate_targets_preserve_both_rule_edges() {
+    let graph = explore(
+        &engine(&[("first", "a", "b"), ("second", "a", "b")]),
+        &atom("a"),
+        &Config::default(),
+    );
+
+    assert_eq!(graph.states.len(), 2);
+    assert_eq!(graph.transitions.len(), 2);
+    assert_eq!(graph.transitions[0].to, graph.transitions[1].to);
+}
+
