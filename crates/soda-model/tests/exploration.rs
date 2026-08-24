@@ -173,3 +173,23 @@ fn witnesses_are_shortest_and_violations_win_over_incompleteness() {
     );
 }
 
+#[test]
+fn direct_discovery_wins_over_a_longer_previously_enqueued_branch() {
+    let graph = explore(
+        &engine(&[
+            ("branch", "a", "b"),
+            ("direct", "a", "d"),
+            ("middle", "b", "c"),
+            ("last", "c", "d"),
+        ]),
+        &atom("a"),
+        &Config::default(),
+    );
+    let witness = graph.witness(&atom("d")).unwrap();
+
+    assert_eq!(witness.len(), 1);
+    assert_eq!(witness[0].rule, "direct");
+    assert_eq!(graph.states.len(), 4);
+    assert_eq!(graph.transitions.len(), 4);
+}
+
