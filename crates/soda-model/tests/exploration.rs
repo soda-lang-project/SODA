@@ -221,3 +221,34 @@ fn duplicate_targets_preserve_both_rule_edges() {
     assert_eq!(graph.transitions[0].to, graph.transitions[1].to);
 }
 
+#[test]
+fn enumeration_errors_and_limits_are_not_terminal_or_safe() {
+    let machine = engine(&[("step", "a", "b")]);
+    let mut config = Config::default();
+    config.evaluation.fuel = 0;
+    let limited = explore(&machine, &atom("a"), &config);
+
+    assert_eq!(
+        limited.incompleteness,
+        vec![Incomplete::Enumeration {
+            state: 0,
+            status: Status::Limit(Limit::Fuel)
+        }]
+    );
+    assert_eq!(limited.states[0].status, StateStatus::Incomplete);
+    assert_eq!(limited.check_invariant(|_| true), InvariantResult::Unknown);
+
+    let bad = Term::app("div", vec![Term::Int(1), Term::Int(0)]);
+    let failed = explore(&machine, &bad, &Config::default());
+
+    assert!(matches!(
+        &failed.incompleteness[..],
+        [Incomplete::Enumeration {
+            status: Status::Error(_),
+            ..
+        }]
+    ));
+    assert_eq!(failed.states[0].status, StateStatus::Incomplete);
+    assert_eq!(failed.reachability(&atom("a")), Reachability::Unknown);
+}
+
