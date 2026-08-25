@@ -77,6 +77,50 @@ impl Domains {
             .ok_or_else(|| "function belongs to a different domain registry".into())
     }
 
+    pub fn least_fixed_point(
+        &self,
+        function: &SemanticFunction,
+    ) -> Result<FixedPoint, DomainError> {
+        if function.input != function.output {
+            return Err("a fixed point requires an endofunction".into());
+        }
+
+        let (domain, _) = self.function_domains(function)?;
+
+        if function.table.len() != domain.elements.len()
+            || function
+                .table
+                .iter()
+                .any(|&index| index >= domain.elements.len())
+            || !monotone(&domain.order, &domain.order, &function.table)
+        {
+            return Err("invalid semantic function for this registry".into());
+        }
+
+        let mut current = 0;
+        let mut chain = vec![domain.elements[0].clone()];
+
+        for _ in 0..domain.elements.len() {
+            let next = function.table[current];
+
+            if next == current {
+                return Ok(FixedPoint {
+                    value: domain.elements[current].clone(),
+                    chain,
+                });
+            }
+
+            if !domain.order[current][next] {
+                return Err("fixed-point iteration failed to ascend".into());
+            }
+
+            chain.push(domain.elements[next].clone());
+            current = next;
+        }
+
+        Err("fixed-point iteration exceeded the finite domain height".into())
+    }
+
     fn function_domains(
         &self,
         function: &SemanticFunction,
