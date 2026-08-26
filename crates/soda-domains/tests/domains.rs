@@ -143,3 +143,50 @@ fn total_monotone_maps_and_nonbottom_least_fixed_points_are_checked() {
     );
 }
 
+#[test]
+fn function_elements_apply_and_preserve_all_finite_chain_suprema() {
+    let registry = domains();
+    let base = registry.get("B").unwrap();
+
+    for function in registry.get("F").unwrap().elements() {
+        for x in base.elements() {
+            let value = registry.apply_element("F", function, x).unwrap();
+
+            assert!(base.index(&value).is_some());
+
+            for y in base.elements() {
+                if base.less_equal(x, y).unwrap() {
+                    let upper = registry.apply_element("F", function, y).unwrap();
+
+                    assert!(base.less_equal(&value, &upper).unwrap());
+                }
+            }
+        }
+    }
+
+    assert_eq!(
+        registry
+            .apply_element("F", &bottom(), &Term::Bool(true))
+            .unwrap(),
+        bottom()
+    );
+    assert!(registry.apply_element("B", &bottom(), &bottom()).is_err());
+    assert!(
+        registry
+            .apply_element(
+                "F",
+                &app(
+                    "table",
+                    vec![Term::Bool(true), Term::Bool(false), Term::Bool(true)]
+                ),
+                &bottom()
+            )
+            .is_err()
+    );
+    assert!(
+        registry
+            .apply_element("F", &bottom(), &Term::Int(4))
+            .is_err()
+    );
+}
+
