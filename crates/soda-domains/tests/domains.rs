@@ -190,3 +190,33 @@ fn function_elements_apply_and_preserve_all_finite_chain_suprema() {
     );
 }
 
+#[test]
+fn functions_cannot_be_transplanted_or_retargeted() {
+    let registry = domains();
+    let function = registry
+        .compile(&map(
+            "identity",
+            vec![
+                (bottom(), bottom()),
+                (Term::Bool(false), Term::Bool(false)),
+                (Term::Bool(true), Term::Bool(true)),
+            ],
+        ))
+        .unwrap();
+    let swapped = Domains::new(
+        &[declaration(
+            "B",
+            DomainExpr::Flat(vec![Term::Bool(true), Term::Bool(false)]),
+        )],
+        Limits::default(),
+    )
+    .unwrap();
+
+    assert!(swapped.apply(&function, &bottom()).is_err());
+    assert!(swapped.least_fixed_point(&function).is_err());
+    let mut retargeted = function.clone();
+    retargeted.output = "L".into();
+
+    assert!(registry.apply(&retargeted, &bottom()).is_err());
+}
+
