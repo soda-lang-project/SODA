@@ -93,3 +93,53 @@ fn products_lifts_and_function_spaces_are_exact_pointed_posets() {
     );
 }
 
+#[test]
+fn total_monotone_maps_and_nonbottom_least_fixed_points_are_checked() {
+    let registry = domains();
+    let b = bottom();
+    let t = Term::Bool(true);
+    let f = Term::Bool(false);
+    let constant = registry
+        .compile(&map(
+            "constant",
+            vec![
+                (b.clone(), t.clone()),
+                (f.clone(), t.clone()),
+                (t.clone(), t.clone()),
+            ],
+        ))
+        .unwrap();
+
+    assert_eq!(registry.apply(&constant, &f).unwrap(), t);
+    let fixed = registry.least_fixed_point(&constant).unwrap();
+
+    assert_eq!(fixed.value, t);
+    assert_eq!(fixed.chain, vec![b.clone(), t.clone()]);
+    assert!(
+        registry
+            .compile(&map("partial", vec![(b.clone(), b.clone())]))
+            .is_err()
+    );
+    assert!(
+        registry
+            .compile(&map(
+                "duplicate",
+                vec![(b.clone(), b.clone()), (b.clone(), t.clone())]
+            ))
+            .is_err()
+    );
+    assert!(
+        registry
+            .compile(&map(
+                "nonmonotone",
+                vec![(b.clone(), t.clone()), (f.clone(), f), (t, b.clone())]
+            ))
+            .is_err()
+    );
+    assert!(
+        registry
+            .compile(&map("outside", vec![(Term::Int(8), b)]))
+            .is_err()
+    );
+}
+
