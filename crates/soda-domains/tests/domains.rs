@@ -220,3 +220,47 @@ fn functions_cannot_be_transplanted_or_retargeted() {
     assert!(registry.apply(&retargeted, &bottom()).is_err());
 }
 
+#[test]
+fn environments_shadow_names_and_check_domain_identity_recursively() {
+    let registry = domains();
+    let mut environment = Environment::default();
+    environment
+        .bind(&registry, "x", "B", &Term::Bool(false))
+        .unwrap();
+    environment
+        .bind(&registry, "x", "B", &Term::Bool(true))
+        .unwrap();
+
+    assert_eq!(environment.lookup("x"), Some(("B", &Term::Bool(true))));
+    let x = Term::Name("x".into());
+
+    assert_eq!(
+        environment
+            .interpret(&registry, "P", &app("pair", vec![x.clone(), bottom()]))
+            .unwrap(),
+        app("pair", vec![Term::Bool(true), bottom()])
+    );
+    assert!(environment.interpret(&registry, "L", &x).is_err());
+    assert!(
+        environment
+            .bind(&registry, "bad", "B", &Term::Int(0))
+            .is_err()
+    );
+    assert!(environment.bind(&registry, "", "B", &bottom()).is_err());
+    assert!(
+        environment
+            .interpret(&registry, "B", &Term::Name("unknown".into()))
+            .is_err()
+    );
+    let changed = Domains::new(
+        &[declaration(
+            "B",
+            DomainExpr::Flat(vec![Term::Bool(true), Term::Bool(false)]),
+        )],
+        Limits::default(),
+    )
+    .unwrap();
+
+    assert!(environment.interpret(&changed, "B", &x).is_err());
+}
+
