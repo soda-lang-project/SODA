@@ -384,3 +384,48 @@ fn invalid_declarations_and_exhausted_budgets_are_errors() {
     );
 }
 
+#[test]
+fn fixed_point_chain_can_cross_multiple_orders_and_requires_endofunction() {
+    let registry = domains();
+    let lift = |term| app("lift", vec![term]);
+    let function = registry
+        .compile(&SemanticMap {
+            name: "ascending".into(),
+            input: "L".into(),
+            output: "L".into(),
+            entries: vec![
+                (bottom(), lift(bottom())),
+                (lift(bottom()), lift(Term::Bool(true))),
+                (lift(Term::Bool(false)), lift(Term::Bool(true))),
+                (lift(Term::Bool(true)), lift(Term::Bool(true))),
+            ],
+        })
+        .unwrap();
+    let point = registry.least_fixed_point(&function).unwrap();
+
+    assert_eq!(
+        point.chain,
+        vec![bottom(), lift(bottom()), lift(Term::Bool(true))]
+    );
+    assert_eq!(
+        registry.apply(&function, &point.value).unwrap(),
+        point.value
+    );
+    let into_lift = registry
+        .compile(&SemanticMap {
+            name: "inject".into(),
+            input: "B".into(),
+            output: "L".into(),
+            entries: registry
+                .get("B")
+                .unwrap()
+                .elements()
+                .iter()
+                .map(|term| (term.clone(), lift(term.clone())))
+                .collect(),
+        })
+        .unwrap();
+
+    assert!(registry.least_fixed_point(&into_lift).is_err());
+}
+
