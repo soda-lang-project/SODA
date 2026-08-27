@@ -64,3 +64,40 @@ fn checks_every_finite_value_including_encoded_bottom() {
     assert_eq!(result, Correspondence::Established { cases: 3 });
 }
 
+#[test]
+fn wrong_table_produces_concrete_witness() {
+    let domains = booleans();
+    let constant = domains
+        .compile(&SemanticMap {
+            name: "constant".into(),
+            input: "B".into(),
+            output: "B".into(),
+            entries: domains
+                .get("B")
+                .unwrap()
+                .elements()
+                .iter()
+                .map(|term| (term.clone(), Term::Bool(true)))
+                .collect(),
+        })
+        .unwrap();
+    let result = check_correspondence(
+        &engine(Term::Var("x".into())),
+        &domains,
+        &constant,
+        "run",
+        &Config::default(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        result,
+        Correspondence::Counterexample {
+            input: atom("bottom"),
+            expected: Term::Bool(true),
+            actual: atom("bottom"),
+            status: Status::NormalForm
+        }
+    );
+}
+
