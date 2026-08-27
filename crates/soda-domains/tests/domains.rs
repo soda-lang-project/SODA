@@ -264,3 +264,37 @@ fn environments_shadow_names_and_check_domain_identity_recursively() {
     assert!(environment.interpret(&changed, "B", &x).is_err());
 }
 
+#[test]
+fn bottom_aliases_normalize_in_nested_products_and_tables() {
+    let registry = Domains::new(
+        &[
+            boolean(),
+            declaration("P", DomainExpr::Product("B".into(), "B".into())),
+            declaration("N", DomainExpr::Product("P".into(), "P".into())),
+            declaration("F", DomainExpr::Function("B".into(), "P".into())),
+        ],
+        Limits {
+            max_elements: 256,
+            max_candidates: 100_000,
+        },
+    )
+    .unwrap();
+    let nested = registry.get("N").unwrap();
+
+    assert_eq!(
+        nested.index(&bottom()),
+        nested.index(&app("pair", vec![bottom(), bottom()]))
+    );
+    assert_eq!(
+        registry.get("F").unwrap().index(&bottom()),
+        registry
+            .get("F")
+            .unwrap()
+            .index(&app("table", vec![bottom(), bottom(), bottom()]))
+    );
+    assert_eq!(
+        registry.apply_element("F", &bottom(), &bottom()).unwrap(),
+        app("pair", vec![bottom(), bottom()])
+    );
+}
+
