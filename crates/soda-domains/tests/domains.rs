@@ -298,3 +298,89 @@ fn bottom_aliases_normalize_in_nested_products_and_tables() {
     );
 }
 
+#[test]
+fn invalid_declarations_and_exhausted_budgets_are_errors() {
+    assert!(Domains::new(&[boolean(), boolean()], Limits::default()).is_err());
+    assert!(
+        Domains::new(
+            &[declaration("", DomainExpr::Flat(vec![]))],
+            Limits::default()
+        )
+        .is_err()
+    );
+    assert!(
+        Domains::new(
+            &[declaration("A", DomainExpr::Lifted("A".into()))],
+            Limits::default()
+        )
+        .is_err()
+    );
+    assert!(
+        Domains::new(
+            &[declaration("A", DomainExpr::Lifted("missing".into()))],
+            Limits::default()
+        )
+        .is_err()
+    );
+    for atom in [bottom(), Term::Var("x".into()), Term::Name("x".into())] {
+        assert!(
+            Domains::new(
+                &[declaration("A", DomainExpr::Flat(vec![atom]))],
+                Limits::default()
+            )
+            .is_err()
+        );
+    }
+
+    assert!(
+        Domains::new(
+            &[boolean()],
+            Limits {
+                max_elements: 2,
+                max_candidates: 100
+            }
+        )
+        .is_err()
+    );
+    let declarations = [
+        boolean(),
+        declaration("F", DomainExpr::Function("B".into(), "B".into())),
+    ];
+
+    assert!(
+        Domains::new(
+            &declarations,
+            Limits {
+                max_elements: 10,
+                max_candidates: 1000
+            }
+        )
+        .is_err()
+    );
+    assert!(
+        Domains::new(
+            &declarations,
+            Limits {
+                max_elements: 20,
+                max_candidates: 1
+            }
+        )
+        .is_err()
+    );
+    assert_eq!(
+        Domains::new(
+            &declarations,
+            Limits {
+                max_elements: 11,
+                max_candidates: 1000
+            }
+        )
+        .unwrap()
+        .get("F")
+        .unwrap()
+        .elements()
+        .len(),
+        11
+    );
+}
+
