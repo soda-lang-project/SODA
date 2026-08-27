@@ -429,3 +429,27 @@ fn fixed_point_chain_can_cross_multiple_orders_and_requires_endofunction() {
     assert!(registry.least_fixed_point(&into_lift).is_err());
 }
 
+#[test]
+fn closed_binder_atoms_use_alpha_equivalence() {
+    let binder = |name: &str| Term::Binder {
+        parameter: name.into(),
+        sort: "Expr".into(),
+        body: Box::new(Term::Name(name.into())),
+    };
+    let first = binder("x");
+    let second = binder("y");
+    let registry = Domains::new(
+        &[declaration("A", DomainExpr::Flat(vec![first.clone()]))],
+        Limits::default(),
+    )
+    .unwrap();
+
+    assert_eq!(registry.get("A").unwrap().index(&second), Some(1));
+    assert!(
+        Domains::new(
+            &[declaration("A", DomainExpr::Flat(vec![first, second]))],
+            Limits::default()
+        )
+        .is_err()
+    );
+}
