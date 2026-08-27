@@ -125,3 +125,40 @@ fn fuel_exhaustion_is_unknown() {
     );
 }
 
+#[test]
+fn out_of_domain_and_stuck_results_violate_normal_form_contract() {
+    let domains = booleans();
+    let map = identity(&domains);
+    let result = check_correspondence(
+        &engine(Term::Int(0)),
+        &domains,
+        &map,
+        "run",
+        &Config::default(),
+    )
+    .unwrap();
+
+    assert!(matches!(
+        result,
+        Correspondence::Counterexample {
+            actual: Term::Int(0),
+            ..
+        }
+    ));
+    let stuck = Engine::new(vec![Rule {
+        name: "only_true".into(),
+        lhs: Term::app("run", vec![Term::Bool(true)]),
+        rhs: Term::Bool(true),
+        condition: None,
+    }])
+    .unwrap();
+
+    assert!(matches!(
+        check_correspondence(&stuck, &domains, &map, "run", &Config::default()).unwrap(),
+        Correspondence::Counterexample {
+            status: Status::Stuck(_),
+            ..
+        }
+    ));
+}
+
