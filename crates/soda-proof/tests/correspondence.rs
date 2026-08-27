@@ -1,0 +1,66 @@
+use soda_ast::{DomainDecl, DomainExpr, Rule, SemanticMap, Term};
+use soda_domains::{Domains, Limits};
+use soda_proof::{Correspondence, check_correspondence};
+use soda_semantics::{Config, Engine, Limit, Status};
+
+fn atom(name: &str) -> Term {
+    Term::app(name, vec![])
+}
+
+fn registry(values: Vec<Term>) -> Domains {
+    Domains::new(
+        &[DomainDecl {
+            name: "B".into(),
+            expression: DomainExpr::Flat(values),
+        }],
+        Limits::default(),
+    )
+    .unwrap()
+}
+
+fn booleans() -> Domains {
+    registry(vec![Term::Bool(false), Term::Bool(true)])
+}
+
+fn identity(domains: &Domains) -> soda_domains::SemanticFunction {
+    domains
+        .compile(&SemanticMap {
+            name: "identity".into(),
+            input: "B".into(),
+            output: "B".into(),
+            entries: domains
+                .get("B")
+                .unwrap()
+                .elements()
+                .iter()
+                .map(|term| (term.clone(), term.clone()))
+                .collect(),
+        })
+        .unwrap()
+}
+
+fn engine(rhs: Term) -> Engine {
+    Engine::new(vec![Rule {
+        name: "op".into(),
+        lhs: Term::app("run", vec![Term::Var("x".into())]),
+        rhs,
+        condition: None,
+    }])
+    .unwrap()
+}
+
+#[test]
+fn checks_every_finite_value_including_encoded_bottom() {
+    let domains = booleans();
+    let result = check_correspondence(
+        &engine(Term::Var("x".into())),
+        &domains,
+        &identity(&domains),
+        "run",
+        &Config::default(),
+    )
+    .unwrap();
+
+    assert_eq!(result, Correspondence::Established { cases: 3 });
+}
+
