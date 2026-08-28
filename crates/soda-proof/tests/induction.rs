@@ -162,3 +162,25 @@ fn rejects_nonfresh_wrong_arity_and_duplicate_fields() {
     }
 }
 
+#[test]
+fn rejects_non_datatype_and_absent_induction_variables() {
+    let mut module = nat();
+    module.sorts[0].inductive = false;
+
+    assert!(
+        verify_inductions(&module)
+            .unwrap_err()
+            .to_string()
+            .contains("not an inductive")
+    );
+    let mut module = nat();
+    module.inductions[0].variable = "missing".into();
+
+    assert!(
+        verify_inductions(&module)
+            .unwrap_err()
+            .to_string()
+            .contains("must occur")
+    );
+}
+
