@@ -108,3 +108,15 @@ fn proves_right_zero_by_structural_induction() {
     assert_eq!(checked[0].steps, 3);
 }
 
+#[test]
+fn earlier_inductive_theorems_are_reusable_lemmas() {
+    let mut module = nat();
+    let mut second = module.inductions[0].clone();
+    second.name = "rightzero_again".into();
+    second.cases[0].steps = vec![step("rightzero", &[], &[("n", zero())])];
+    second.cases[1].steps = vec![step("rightzero", &[], &[("n", succ(var("k")))])];
+    module.inductions.push(second);
+
+    assert_eq!(verify_inductions(&module).unwrap().len(), 2);
+}
+
