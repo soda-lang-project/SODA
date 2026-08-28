@@ -120,3 +120,30 @@ fn earlier_inductive_theorems_are_reusable_lemmas() {
     assert_eq!(verify_inductions(&module).unwrap().len(), 2);
 }
 
+#[test]
+fn rejects_missing_duplicate_and_unknown_cases() {
+    let mut module = nat();
+    module.inductions[0].cases.pop();
+
+    assert!(
+        verify_inductions(&module)
+            .unwrap_err()
+            .to_string()
+            .contains("cover each constructor")
+    );
+    let mut module = nat();
+    let duplicate = module.inductions[0].cases[0].clone();
+    module.inductions[0].cases.push(duplicate);
+
+    assert!(
+        verify_inductions(&module)
+            .unwrap_err()
+            .to_string()
+            .contains("cover each constructor")
+    );
+    let mut module = nat();
+    module.inductions[0].cases[0].constructor = "bogus".into();
+
+    assert!(verify_inductions(&module).is_err());
+}
+
