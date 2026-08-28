@@ -162,3 +162,22 @@ fn out_of_domain_and_stuck_results_violate_normal_form_contract() {
     ));
 }
 
+#[test]
+fn functions_compiled_for_another_registry_are_errors() {
+    let domains = booleans();
+    let other = registry(vec![Term::Int(0), Term::Int(1)]);
+
+    assert!(
+        check_correspondence(
+            &engine(Term::Var("x".into())),
+            &other,
+            &identity(&domains),
+            "run",
+            &Config::default()
+        )
+        .unwrap_err()
+        .to_string()
+        .contains("different domain registry")
+    );
+}
+
