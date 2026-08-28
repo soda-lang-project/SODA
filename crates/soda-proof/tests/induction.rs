@@ -184,3 +184,17 @@ fn rejects_non_datatype_and_absent_induction_variables() {
     );
 }
 
+#[test]
+fn annotation_constrains_the_theorem_variable_not_an_isolated_witness() {
+    let mut module = nat();
+    module.inductions[0].lhs = app("add", vec![var("n"), Term::Int(0)]);
+    module.inductions[0].rhs = var("n");
+
+    assert!(
+        verify_inductions(&module)
+            .unwrap_err()
+            .to_string()
+            .contains("sort mismatch")
+    );
+}
+
