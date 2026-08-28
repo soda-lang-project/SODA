@@ -147,3 +147,18 @@ fn rejects_missing_duplicate_and_unknown_cases() {
     assert!(verify_inductions(&module).is_err());
 }
 
+#[test]
+fn rejects_nonfresh_wrong_arity_and_duplicate_fields() {
+    for fields in [vec!["n".into()], vec![], vec!["k".into(), "k".into()]] {
+        let mut module = nat();
+        module.inductions[0].cases[1].arguments = fields;
+
+        assert!(
+            verify_inductions(&module)
+                .unwrap_err()
+                .to_string()
+                .contains("fresh, distinct")
+        );
+    }
+}
+
