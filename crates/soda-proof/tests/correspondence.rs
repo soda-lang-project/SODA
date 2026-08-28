@@ -225,3 +225,34 @@ fn compares_canonical_domain_values_instead_of_raw_encodings() {
     );
 }
 
+#[test]
+fn arithmetic_errors_are_witnesses_and_depth_limits_are_unknown() {
+    let domains = booleans();
+    let map = identity(&domains);
+    let error = engine(Term::app("div", vec![Term::Int(1), Term::Int(0)]));
+
+    assert!(matches!(
+        check_correspondence(&error, &domains, &map, "run", &Config::default()).unwrap(),
+        Correspondence::Counterexample {
+            status: Status::Error(_),
+            ..
+        }
+    ));
+    assert!(matches!(
+        check_correspondence(
+            &engine(Term::Var("x".into())),
+            &domains,
+            &map,
+            "run",
+            &Config {
+                max_depth: 0,
+                ..Config::default()
+            }
+        )
+        .unwrap(),
+        Correspondence::Unknown {
+            status: Status::Limit(Limit::Depth),
+            ..
+        }
+    ));
+}
