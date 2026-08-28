@@ -181,3 +181,47 @@ fn functions_compiled_for_another_registry_are_errors() {
     );
 }
 
+#[test]
+fn compares_canonical_domain_values_instead_of_raw_encodings() {
+    let domains = Domains::new(
+        &[
+            DomainDecl {
+                name: "B".into(),
+                expression: DomainExpr::Flat(vec![Term::Bool(false), Term::Bool(true)]),
+            },
+            DomainDecl {
+                name: "P".into(),
+                expression: DomainExpr::Product("B".into(), "B".into()),
+            },
+        ],
+        Limits::default(),
+    )
+    .unwrap();
+    let map = domains
+        .compile(&SemanticMap {
+            name: "bottom_map".into(),
+            input: "B".into(),
+            output: "P".into(),
+            entries: domains
+                .get("B")
+                .unwrap()
+                .elements()
+                .iter()
+                .map(|term| (term.clone(), atom("bottom")))
+                .collect(),
+        })
+        .unwrap();
+
+    assert_eq!(
+        check_correspondence(
+            &engine(atom("bottom")),
+            &domains,
+            &map,
+            "run",
+            &Config::default()
+        )
+        .unwrap(),
+        Correspondence::Established { cases: 3 }
+    );
+}
+
