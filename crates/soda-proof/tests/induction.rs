@@ -233,3 +233,21 @@ fn hypotheses_are_local_and_forward_or_self_references_fail() {
     }
 }
 
+#[test]
+fn supports_exhaustive_cases_without_recursive_fields() {
+    let mut module = nat();
+    module
+        .signatures
+        .retain(|signature| signature.name == "zero");
+    module.equations.clear();
+    let theorem = &mut module.inductions[0];
+    theorem.lhs = var("n");
+    theorem.rhs = var("n");
+    theorem.cases = vec![InductionCase {
+        constructor: "zero".into(),
+        arguments: vec![],
+        steps: vec![],
+    }];
+
+    assert_eq!(verify_inductions(&module).unwrap()[0].cases, 1);
+}
