@@ -198,3 +198,18 @@ fn annotation_constrains_the_theorem_variable_not_an_isolated_witness() {
     );
 }
 
+#[test]
+fn induction_hypotheses_cannot_be_instantiated_at_larger_terms() {
+    let mut module = nat();
+    module.inductions[0].cases[1].steps[1]
+        .substitution
+        .insert("k".into(), succ(var("k")));
+
+    assert!(
+        verify_inductions(&module)
+            .unwrap_err()
+            .to_string()
+            .contains("remain anchored")
+    );
+}
+
