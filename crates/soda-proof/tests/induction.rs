@@ -213,3 +213,23 @@ fn induction_hypotheses_cannot_be_instantiated_at_larger_terms() {
     );
 }
 
+#[test]
+fn hypotheses_are_local_and_forward_or_self_references_fail() {
+    for reference in ["ih_k", "rightzero", "future"] {
+        let mut module = nat();
+        module.inductions[0].cases[0].steps[0].axiom = reference.into();
+        if reference == "future" {
+            let mut future = module.inductions[0].clone();
+            future.name = "future".into();
+            module.inductions.push(future);
+        }
+
+        assert!(
+            verify_inductions(&module)
+                .unwrap_err()
+                .to_string()
+                .contains("unknown axiom")
+        );
+    }
+}
+
