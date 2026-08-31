@@ -1,0 +1,11 @@
+[package]
+name = "soda-codegen"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+soda-ast.workspace = true
+
+[lints]
+workspace = true
