@@ -40,6 +40,8 @@ enum Command {
     Compare(Input),
     /// Check every explicit equational proof certificate.
     Prove(Source),
+    /// Search inference rules for query declarations or a query term.
+    Infer(Input),
 
 }
 
@@ -145,6 +147,7 @@ impl Cli {
             Command::Denote(input) => (CommandKind::Denote, input.source, input.term),
 
             Command::Compare(input) => (CommandKind::Compare, input.source, input.term),
+            Command::Infer(input) => (CommandKind::Infer, input.source, input.term),
 
         };
 

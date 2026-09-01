@@ -10,6 +10,8 @@ mod domains;
 mod error;
 mod evaluation;
 
+mod inference;
+
 mod presentation;
 use application::{Arguments, check_input, execute};
 
