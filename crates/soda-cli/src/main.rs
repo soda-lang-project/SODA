@@ -2,6 +2,7 @@ use clap::{CommandFactory, Parser};
 use std::env;
 use std::process::ExitCode;
 
+mod analysis;
 mod application;
 mod checking;
 mod cli;

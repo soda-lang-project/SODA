@@ -47,6 +47,8 @@ enum Command {
     Infer(Input),
     /// Explore all contextual rewrites, including overlapping rules.
     Explore(Input),
+    /// Report syntactic termination criterion and critical pairs.
+    Analyze(Source),
 
 }
 
@@ -147,6 +149,7 @@ impl Cli {
 
             Command::Check(source) => (CommandKind::Check, source, None),
             Command::Prove(source) => (CommandKind::Prove, source, None),
+            Command::Analyze(source) => (CommandKind::Analyze, source, None),
 
             Command::Run(input) => (CommandKind::Run, input.source, input.term),
             Command::Denote(input) => (CommandKind::Denote, input.source, input.term),
