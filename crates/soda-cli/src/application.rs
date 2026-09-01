@@ -11,7 +11,8 @@ pub(crate) enum CommandKind {
     Check,
     Run,
     Denote,
-
+    Domains,
+    Correspond,
     Compare,
     Prove,
     Infer,
@@ -105,7 +106,8 @@ fn execute_checked(
         }
 
         CommandKind::Infer => inference::run(module, args, context),
-
+        CommandKind::Domains => return domains.show(args, context),
+        CommandKind::Correspond => return domains.correspond(&engine, args, context),
         CommandKind::Explore => exploration::run(&engine, module, args, context),
 
         CommandKind::Run => evaluation::run(

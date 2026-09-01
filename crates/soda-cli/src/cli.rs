@@ -35,7 +35,10 @@ enum Command {
     Run(Input),
     /// Compositionally evaluate a term or the file's eval declarations.
     Denote(Input),
-
+    /// Check finite domains, apply semantic maps, and compute fixed points.
+    Domains(Input),
+    /// Check operation(map_name) against every represented domain input.
+    Correspond(Input),
     /// Compare both evaluators on the specified concrete inputs.
     Compare(Input),
     /// Check every explicit equational proof certificate.
@@ -147,7 +150,8 @@ impl Cli {
 
             Command::Run(input) => (CommandKind::Run, input.source, input.term),
             Command::Denote(input) => (CommandKind::Denote, input.source, input.term),
-
+            Command::Domains(input) => (CommandKind::Domains, input.source, input.term),
+            Command::Correspond(input) => (CommandKind::Correspond, input.source, input.term),
             Command::Compare(input) => (CommandKind::Compare, input.source, input.term),
             Command::Infer(input) => (CommandKind::Infer, input.source, input.term),
             Command::Explore(input) => (CommandKind::Explore, input.source, input.term),
