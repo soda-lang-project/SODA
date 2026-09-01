@@ -9,7 +9,7 @@ mod diagnostics;
 mod domains;
 mod error;
 mod evaluation;
-
+mod exploration;
 mod inference;
 
 mod presentation;

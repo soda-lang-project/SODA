@@ -42,6 +42,8 @@ enum Command {
     Prove(Source),
     /// Search inference rules for query declarations or a query term.
     Infer(Input),
+    /// Explore all contextual rewrites, including overlapping rules.
+    Explore(Input),
 
 }
 
@@ -148,7 +150,7 @@ impl Cli {
 
             Command::Compare(input) => (CommandKind::Compare, input.source, input.term),
             Command::Infer(input) => (CommandKind::Infer, input.source, input.term),
-
+            Command::Explore(input) => (CommandKind::Explore, input.source, input.term),
         };
 
         Arguments {

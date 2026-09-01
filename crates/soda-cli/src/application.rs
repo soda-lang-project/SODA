@@ -1,5 +1,5 @@
 use crate::diagnostics::Context;
-use crate::{checking, domains, evaluation, inference};
+use crate::{checking, domains, evaluation, exploration, inference};
 use soda_ast::Module;
 use soda_parser::NotationStyle;
 use soda_semantics::{Config, Engine};
@@ -15,6 +15,7 @@ pub(crate) enum CommandKind {
     Compare,
     Prove,
     Infer,
+    Explore,
 
 }
 
@@ -104,6 +105,8 @@ fn execute_checked(
         }
 
         CommandKind::Infer => inference::run(module, args, context),
+
+        CommandKind::Explore => exploration::run(&engine, module, args, context),
 
         CommandKind::Run => evaluation::run(
             &engine,
