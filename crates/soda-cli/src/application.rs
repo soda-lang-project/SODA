@@ -1,5 +1,5 @@
 use crate::diagnostics::Context;
-use crate::{checking, domains};
+use crate::{checking, domains, evaluation};
 use soda_ast::Module;
 use soda_parser::NotationStyle;
 use soda_semantics::{Config, Engine};
@@ -9,7 +9,10 @@ const MAX_REPORTED_SORT_ERRORS: usize = 20;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum CommandKind {
     Check,
+    Run,
+    Denote,
 
+    Compare,
     Prove,
 
 }
@@ -92,13 +95,30 @@ fn execute_checked(
     let domains = domains::CheckedDomains::new(module)?;
     let engine = Engine::new(module.rules.clone())?;
 
-    let result: Result<bool, String> = match args.command {
+    let result = match args.command {
         CommandKind::Check | CommandKind::Prove => {
             checking::show(module, args, &theorems);
 
             Ok(true)
         }
 
+        CommandKind::Run => evaluation::run(
+            &engine,
+            module,
+            args,
+            context,
+            evaluation::Mode::Operational,
+        ),
+        CommandKind::Denote => evaluation::run(
+            &engine,
+            module,
+            args,
+            context,
+            evaluation::Mode::Compositional,
+        ),
+        CommandKind::Compare => {
+            evaluation::run(&engine, module, args, context, evaluation::Mode::Compare)
+        }
     };
 
     result.map_err(Into::into)

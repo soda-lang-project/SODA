@@ -8,6 +8,7 @@ mod cli;
 mod diagnostics;
 mod domains;
 mod error;
+mod evaluation;
 
 mod presentation;
 use application::{Arguments, check_input, execute};

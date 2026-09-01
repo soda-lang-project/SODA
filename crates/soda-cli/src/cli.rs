@@ -30,7 +30,14 @@ enum Command {
 
     /// Validate syntax, rules, axioms, and every proof certificate.
     Check(Source),
+    /// Operationally evaluate a term or the file's eval declarations.
+    #[command(visible_alias = "eval")]
+    Run(Input),
+    /// Compositionally evaluate a term or the file's eval declarations.
+    Denote(Input),
 
+    /// Compare both evaluators on the specified concrete inputs.
+    Compare(Input),
     /// Check every explicit equational proof certificate.
     Prove(Source),
 
@@ -133,6 +140,11 @@ impl Cli {
 
             Command::Check(source) => (CommandKind::Check, source, None),
             Command::Prove(source) => (CommandKind::Prove, source, None),
+
+            Command::Run(input) => (CommandKind::Run, input.source, input.term),
+            Command::Denote(input) => (CommandKind::Denote, input.source, input.term),
+
+            Command::Compare(input) => (CommandKind::Compare, input.source, input.term),
 
         };
 
