@@ -1,0 +1,33 @@
+[package]
+name = "soda-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "soda"
+path = "src/main.rs"
+
+[[bench]]
+name = "performance"
+harness = false
+
+[dependencies]
+clap.workspace = true
+soda-ast.workspace = true
+soda-parser.workspace = true
+soda-semantics.workspace = true
+soda-verifier.workspace = true
+soda-relations = { path = "../soda-relations" }
+soda-model = { path = "../soda-model" }
+soda-codegen = { path = "../soda-codegen" }
+soda-sorts = { path = "../soda-sorts" }
+soda-domains = { path = "../soda-domains" }
+soda-proof = { path = "../soda-proof" }
+soda-diagnostics.workspace = true
+anstyle.workspace = true
+serde_json.workspace = true
+url = "2.5.7"
+
+[lints]
+workspace = true
