@@ -18,7 +18,7 @@ pub(crate) enum CommandKind {
     Infer,
     Explore,
     Analyze,
-
+    EmitRust,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -105,7 +105,11 @@ fn execute_checked(
 
             Ok(true)
         }
+        CommandKind::EmitRust => {
+            print!("{}", soda_codegen::emit_rust(module));
 
+            Ok(true)
+        }
         CommandKind::Infer => inference::run(module, args, context),
         CommandKind::Domains => return domains.show(args, context),
         CommandKind::Correspond => return domains.correspond(&engine, args, context),
