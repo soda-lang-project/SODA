@@ -27,7 +27,8 @@ pub(crate) struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-
+    /// Run the Language Server Protocol over stdin/stdout.
+    Lsp,
     /// Format source; --check reports drift without writing files.
     Fmt {
         /// Source files, or - for stdin (formatted output goes to stdout).
@@ -139,7 +140,11 @@ fn bounded(value: &str, minimum: usize, maximum: usize) -> Result<usize, String>
 impl Cli {
     pub(crate) fn run_tooling(&self) -> Option<Result<bool, String>> {
         match &self.command {
-
+            Command::Lsp => Some(
+                crate::lsp::serve()
+                    .map(|()| true)
+                    .map_err(|e| e.to_string()),
+            ),
             Command::Fmt { files, check } => Some(format_files(files, *check)),
             _ => None,
         }
@@ -156,7 +161,7 @@ impl Cli {
     pub(crate) fn into_arguments(self) -> Arguments {
         let output_color = self.diagnostics().stdout_color;
         let (command, source, term) = match self.command {
-            Command::Fmt { .. } => unreachable!("tooling is dispatched first"),
+            Command::Lsp | Command::Fmt { .. } => unreachable!("tooling is dispatched first"),
             Command::Check(source) => (CommandKind::Check, source, None),
             Command::Prove(source) => (CommandKind::Prove, source, None),
             Command::Analyze(source) => (CommandKind::Analyze, source, None),

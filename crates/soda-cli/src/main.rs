@@ -12,7 +12,7 @@ mod error;
 mod evaluation;
 mod exploration;
 mod inference;
-
+mod lsp;
 mod presentation;
 use application::{Arguments, check_input, execute};
 
