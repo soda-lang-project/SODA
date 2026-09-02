@@ -28,6 +28,14 @@ pub(crate) struct Cli {
 #[derive(Subcommand)]
 enum Command {
 
+    /// Format source; --check reports drift without writing files.
+    Fmt {
+        /// Source files, or - for stdin (formatted output goes to stdout).
+        #[arg(required = true)]
+        files: Vec<String>,
+        #[arg(long)]
+        check: bool,
+    },
     /// Validate syntax, rules, axioms, and every proof certificate.
     Check(Source),
     /// Operationally evaluate a term or the file's eval declarations.
@@ -132,6 +140,7 @@ impl Cli {
     pub(crate) fn run_tooling(&self) -> Option<Result<bool, String>> {
         match &self.command {
 
+            Command::Fmt { files, check } => Some(format_files(files, *check)),
             _ => None,
         }
     }
@@ -147,7 +156,7 @@ impl Cli {
     pub(crate) fn into_arguments(self) -> Arguments {
         let output_color = self.diagnostics().stdout_color;
         let (command, source, term) = match self.command {
-
+            Command::Fmt { .. } => unreachable!("tooling is dispatched first"),
             Command::Check(source) => (CommandKind::Check, source, None),
             Command::Prove(source) => (CommandKind::Prove, source, None),
             Command::Analyze(source) => (CommandKind::Analyze, source, None),
@@ -209,3 +218,41 @@ fn command_styles() -> clap::builder::Styles {
         .invalid(bright(AnsiColor::BrightRed))
 }
 
+fn format_files(files: &[String], check: bool) -> Result<bool, String> {
+    use std::io::Read;
+    if files.iter().any(|file| file == "-") && files.len() != 1 {
+        return Err("stdin must be the only formatting input".into());
+    }
+    // Prepare every result before writing, so a lexical error cannot partially format a batch.
+    let prepared = files
+        .iter()
+        .map(|file| {
+            let source = if file == "-" {
+                let mut source = String::new();
+                std::io::stdin()
+                    .read_to_string(&mut source)
+                    .map_err(|e| e.to_string())?;
+                source
+            } else {
+                std::fs::read_to_string(file).map_err(|e| format!("{file}: {e}"))?
+            };
+            let formatted =
+                soda_parser::format_source(&source).map_err(|e| format!("{file}: {e}"))?;
+            Ok((file, source, formatted))
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    let mut clean = true;
+    for (file, source, formatted) in prepared {
+        if check {
+            if source != formatted {
+                eprintln!("{file}: formatting differs");
+                clean = false;
+            }
+        } else if file == "-" {
+            print!("{formatted}");
+        } else if source != formatted {
+            std::fs::write(file, formatted).map_err(|e| format!("{file}: {e}"))?;
+        }
+    }
+    Ok(clean)
+}
