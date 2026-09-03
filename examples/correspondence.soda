@@ -1,0 +1,14 @@
+module Correspondence;
+
+rule negate_bottom: negate(bottom) => bottom;
+rule negate_false: negate(false) => true;
+rule negate_true: negate(true) => false;
+
+domain Truth = flat(false, true);
+
+map meaning: Truth -> Truth {
+    bottom => bottom;
+    false => true;
+    true => false;
+}
+
