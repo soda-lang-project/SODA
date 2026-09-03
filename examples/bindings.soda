@@ -1,0 +1,16 @@
+module Bindings;
+
+sort Token;
+
+constructor token(): Token;
+
+eval apply(bind(x: Int, add(@x, 1)), 41);
+eval apply(lambda x: Int. bind(y: Int, @x), 7);
+eval alpha_eq(λx: Int. @x, lambda y: Int. @y);
+eval fresh(@unused, bind(x: Int, @x));
+
+function offset(Fn(Int, Int)): Int {
+    case offset_value: (bind(x: Int, add(@x, ?n))) => ?n;
+}
+
+eval offset(lambda y: Int. add(@y, 42));
