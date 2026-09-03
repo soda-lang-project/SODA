@@ -1,0 +1,16 @@
+module FunctionDefinitions;
+
+function increment(?n: Int): Int => add(?n, 1);
+
+function magnitude(Int): Int {
+    case nonnegative: (?n) => ?n when ge(?n, 0);
+    case negative: (?n) => sub(0, ?n) when lt(?n, 0);
+}
+
+function identity(Int): Int {
+    case identity_value: (?n) => ?n;
+}
+
+eval increment(41);
+eval magnitude(-7);
+eval identity(3);
