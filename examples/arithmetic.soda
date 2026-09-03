@@ -1,0 +1,23 @@
+module Arithmetic;
+
+rule factorial_zero: factorial(0) => 1;
+rule factorial_step: factorial(?n) => mul(?n, factorial(sub(?n, 1))) when gt(?n, 0);
+
+rule gcd_zero: gcd(?a, 0) => ?a;
+rule gcd_step: gcd(?a, ?b) => gcd(?b, mod(?a, ?b)) when gt(?b, 0);
+
+axiom add_zero: add(?x, 0) = ?x;
+axiom add_commute: add(?x, ?y) = add(?y, ?x);
+
+proof symbolic_identity: add(0, ?n) = ?n {
+    add_commute at [] with { x = 0, y = ?n };
+    add_zero at [] with { x = ?n };
+}
+
+proof contextual_identity: box(add(?n, 0)) = box(?n) {
+    add_zero at [0] with { x = ?n };
+}
+
+eval factorial(6);
+eval gcd(84, 30);
+eval if true then 42 else div(1, 0);
