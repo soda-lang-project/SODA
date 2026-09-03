@@ -1,0 +1,24 @@
+module ComputedBindings;
+
+sort Expr;
+
+constructor lit(Int): Expr;
+constructor plus(Expr, Expr): Expr;
+
+judgment evaluates(Expr, Int) kind evaluation;
+judgment twice(Int, Int) kind relation;
+judgment pipeline(Int, Int) kind relation;
+
+infer literal: evaluates(lit(?n), ?n);
+infer addition: evaluates(plus(?a, ?b), ?result)
+    if left: evaluates(?a, ?x), right: evaluates(?b, ?y) let ?result = add(?x, ?y);
+
+infer double: twice(?n, ?result) let ?result = mul(?n, 2);
+
+infer staged: pipeline(?n, ?result)
+    if let ?incremented = add(?n, 1),
+       doubled: twice(?incremented, ?doubled) let ?result = add(?doubled, 10);
+
+query evaluates(plus(lit(2), plus(lit(3), lit(4))), ?value);
+query pipeline(2, ?value);
+query twice(5, 10);
