@@ -1,0 +1,9 @@
+module Mutex;
+
+# The eval declaration is a graph root; terminal states have no outgoing rules.
+rule enter_left: state(free, ready, ?right) => state(left, inside, ?right);
+rule leave_left: state(left, inside, ?right) => state(free, done, ?right);
+rule enter_right: state(free, ?left, ready) => state(right, ?left, inside);
+rule leave_right: state(right, ?left, inside) => state(free, ?left, done);
+
+eval state(free, ready, ready);
