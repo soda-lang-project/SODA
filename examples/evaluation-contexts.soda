@@ -1,0 +1,58 @@
+module EvaluationContexts;
+
+datatype Expr {
+    constructor tt();
+    constructor ff();
+    constructor cond(Expr, Expr, Expr);
+    constructor pair(Expr, Expr);
+    constructor first(Expr);
+}
+
+datatype Context {
+    constructor hole();
+    constructor test(Context, Expr, Expr);
+    constructor left(Context, Expr);
+    constructor right(Expr, Context);
+    constructor projection(Context);
+}
+
+judgment value(Expr);
+
+infer v_true: value(tt);
+infer v_false: value(ff);
+infer v_pair: value(pair(?a, ?b)) if value(?a), value(?b);
+
+judgment decompose(Expr, Context, Expr);
+
+infer d_hole: decompose(?e, hole, ?e);
+infer d_test: decompose(cond(?c, ?a, ?b), test(?k, ?a, ?b), ?r) if decompose(?c, ?k, ?r);
+infer d_left: decompose(pair(?a, ?b), left(?k, ?b), ?r) if decompose(?a, ?k, ?r);
+infer d_right: decompose(pair(?a, ?b), right(?a, ?k), ?r) if value(?a), decompose(?b, ?k, ?r);
+infer d_projection: decompose(first(?e), projection(?k), ?r) if decompose(?e, ?k, ?r);
+
+judgment plug(Context, Expr, Expr);
+
+infer p_hole: plug(hole, ?e, ?e);
+infer p_test: plug(test(?k, ?a, ?b), ?e, cond(?out, ?a, ?b)) if plug(?k, ?e, ?out);
+infer p_left: plug(left(?k, ?b), ?e, pair(?out, ?b)) if plug(?k, ?e, ?out);
+infer p_right: plug(right(?a, ?k), ?e, pair(?a, ?out)) if plug(?k, ?e, ?out);
+infer p_projection: plug(projection(?k), ?e, first(?out)) if plug(?k, ?e, ?out);
+
+judgment contract(Expr, Expr);
+
+infer c_true: contract(cond(tt, ?a, ?b), ?a);
+infer c_false: contract(cond(ff, ?a, ?b), ?b);
+infer c_first: contract(first(pair(?a, ?b)), ?a) if value(?a), value(?b);
+
+judgment step(Expr, Expr) kind transition;
+
+notation step "$0 → $1" ascii "$0 -> $1";
+
+infer context_step: ?e → ?out
+    if decomposition: decompose(?e, ?k, ?redex),
+       contraction: contract(?redex, ?reduct),
+       filling: plug(?k, ?reduct, ?out);
+
+query cond(cond(tt, ff, tt), tt, ff) → ?next;
+query pair(cond(tt, ff, tt), cond(ff, ff, tt)) → ?next;
+query first(pair(tt, cond(ff, ff, tt))) → ?next;
