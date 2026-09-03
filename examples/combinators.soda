@@ -1,0 +1,8 @@
+module Combinators;
+
+rule identity: apply(i, ?x) => ?x;
+rule constant: apply(apply(k, ?x), ?y) => ?x;
+rule distribute: apply(apply(apply(s, ?x), ?y), ?z) => apply(apply(?x, ?z), apply(?y, ?z));
+
+eval apply(apply(apply(s, k), k), answer);
+eval apply(apply(k, 42), apply(apply(apply(s, i), i), apply(apply(s, i), i)));
