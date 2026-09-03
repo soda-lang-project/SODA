@@ -1,0 +1,57 @@
+module CCS;
+
+datatype Channel {
+    constructor a();
+    constructor b();
+}
+
+datatype Action {
+    constructor input(Channel);
+    constructor output(Channel);
+    constructor tau();
+}
+
+datatype Process {
+    constructor stop();
+    constructor prefix(Action, Process);
+    constructor choice(Process, Process);
+    constructor parallel(Process, Process);
+    constructor restrict(Channel, Process);
+}
+
+judgment complement(Action, Action);
+
+infer input_output: complement(input(?a), output(?a));
+infer output_input: complement(output(?a), input(?a));
+
+judgment allowed(Action, Channel);
+
+infer allow_tau: allowed(tau, ?a);
+infer allow_input: allowed(input(?a), ?b) when not(eq(?a, ?b));
+infer allow_output: allowed(output(?a), ?b) when not(eq(?a, ?b));
+
+judgment transition(Process, Action, Process) kind transition;
+
+notation transition "$0 ─ $1 → $2" ascii "$0 -- $1 -> $2";
+
+infer action: transition(prefix(?a, ?p), ?a, ?p);
+infer choice_left: transition(choice(?p, ?q), ?a, ?next) if transition(?p, ?a, ?next);
+infer choice_right: transition(choice(?p, ?q), ?a, ?next) if transition(?q, ?a, ?next);
+infer parallel_left: transition(parallel(?p, ?q), ?a, parallel(?next, ?q))
+    if transition(?p, ?a, ?next);
+infer parallel_right: transition(parallel(?p, ?q), ?a, parallel(?p, ?next))
+    if transition(?q, ?a, ?next);
+infer synchronize: transition(parallel(?p, ?q), tau, parallel(?pnext, ?qnext))
+    if sender: transition(?p, ?a, ?pnext),
+       receiver: transition(?q, ?b, ?qnext),
+       complementary: complement(?a, ?b);
+infer restriction: transition(restrict(?name, ?p), ?a, restrict(?name, ?next))
+    if transition(?p, ?a, ?next), allowed(?a, ?name);
+
+query transition(choice(prefix(input(a), stop), prefix(output(b), stop)), ?label, ?next);
+query transition(parallel(prefix(input(a), stop), prefix(output(a), stop)), ?label, ?next);
+query transition(
+    restrict(a, parallel(prefix(input(a), stop), prefix(output(a), stop))),
+    ?label,
+    ?next
+);
