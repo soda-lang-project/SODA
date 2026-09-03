@@ -1,0 +1,19 @@
+module Domains;
+
+domain Truth = flat(false, true);
+domain Environment = product(Truth, Truth);
+domain Partial = lift(Truth);
+domain Functions = functions(Truth, Truth);
+
+map negate: Truth -> Truth {
+    ⊥ => ⊥;
+    false => true;
+    true => false;
+}
+map constant_true: Truth -> Truth {
+    bottom => true;
+    false => true;
+    true => true;
+}
+
+fixed constant_true;
