@@ -1,0 +1,41 @@
+module LanguageTour;
+
+import soda.prelude;
+
+record Observation = observed { counter: Int, samples: IntList };
+
+function program(Int): Int -> StateResult {
+    case program_meaning:
+        (?offset)
+        => do State {
+            n <- state_get;
+            state_tick;
+            return add(n, ?offset);
+        };
+}
+
+function package(StateResult): Observation {
+    case package_result: (state_answer(?v, ?s)) => observed { samples: [?v, ?s], counter: ?s };
+}
+
+function counter(Observation): Int {
+    case counter_field: (observed { samples: ?samples, counter: ?s }) => ?s;
+}
+
+judgment observes(Int, Observation) kind denotation;
+
+infer calculated_observation: observes(?initial, ?observation)
+    let ?observation = package(apply(program(5), ?initial));
+
+eval package(apply(program(5), 10));
+eval counter(observed { counter: 3, samples: [1, 2] });
+eval do Exceptions {
+    n <- exception_div(84, 2);
+    return add(n, 1);
+};
+eval prob_equal(
+    prob_mix(fraction(1, 2), prob_unit(true), prob_zero),
+    prob_weights(fraction(0, 1), fraction(1, 2))
+);
+
+query observes(10, ?observation);
