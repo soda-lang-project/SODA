@@ -1,0 +1,11 @@
+module Naturals;
+
+import soda.data.nat;
+import soda.collections;
+
+proof reverse_identity: ?n = nat_add(zero, ?n) {
+    nat_left_zero reverse at [] with { m = ?n };
+}
+
+eval nat_mul(succ(succ(zero)), succ(succ(succ(zero))));
+eval list_length(list_append([1, 2], [3]));
