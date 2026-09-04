@@ -1,0 +1,34 @@
+module Induction;
+
+import soda.data.nat;
+
+function box(Nat): Nat {}
+
+proof base: nat_add(zero, zero) = zero {
+    nat_add_zero with { m = zero };
+}
+
+proof reuse_base: box(nat_add(zero, zero)) = box(zero) {
+    base at [0];
+}
+
+induction right_zero on ?n: Nat: nat_add(?n, zero) = ?n {
+    case zero {
+        nat_add_zero with { m = zero };
+    }
+    case succ(k) {
+        nat_add_succ with { n = ?k, m = zero };
+        ih_k at [0] with { k = ?k };
+    }
+}
+
+induction boxed_right_zero on ?n: Nat: box(nat_add(?n, zero)) = box(?n) {
+    case zero {
+        nat_right_zero at [0] with { n = zero };
+    }
+    case succ(k) {
+        nat_right_zero at [0] with { n = succ(?k) };
+    }
+}
+
+eval nat_add(succ(succ(zero)), succ(zero));
