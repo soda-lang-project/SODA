@@ -1,0 +1,17 @@
+module Relations;
+
+infer add_zero: sum(zero, ?n, ?n);
+infer add_succ: sum(succ(?a), ?b, succ(?c)) if sum(?a, ?b, ?c);
+
+infer type_nat: has_type(nat(?n), natural);
+infer type_bool: has_type(boolean(?b), boolean_type);
+infer type_plus: has_type(plus(?a, ?b), natural) if has_type(?a, natural), has_type(?b, natural);
+infer type_if: has_type(conditional(?test, ?yes, ?no), ?type)
+    if has_type(?test, boolean_type), has_type(?yes, ?type), has_type(?no, ?type);
+
+infer left_choice: step(choice(?a, ?b), ?a);
+infer right_choice: step(choice(?a, ?b), ?b);
+
+query sum(succ(succ(zero)), succ(zero), ?answer);
+query has_type(conditional(boolean(true), plus(nat(1), nat(2)), nat(3)), ?type);
+query step(choice(left, right), ?next);
