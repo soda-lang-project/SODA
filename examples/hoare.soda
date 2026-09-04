@@ -1,0 +1,18 @@
+module Hoare;
+
+infer subst_variable: subst_expr(var, ?replacement, ?replacement);
+infer subst_literal: subst_expr(lit(?n), ?replacement, lit(?n));
+infer subst_add: subst_expr(add_expr(?a, ?b), ?replacement, add_expr(?ra, ?rb))
+    if subst_expr(?a, ?replacement, ?ra), subst_expr(?b, ?replacement, ?rb);
+
+infer subst_equal: subst_assert(equal(?a, ?b), ?replacement, equal(?ra, ?rb))
+    if subst_expr(?a, ?replacement, ?ra), subst_expr(?b, ?replacement, ?rb);
+
+infer hoare_skip: hoare(?assertion, skip, ?assertion);
+infer hoare_assign: hoare(?pre, assign(?expression), ?post)
+    if subst_assert(?post, ?expression, ?pre);
+infer hoare_sequence: hoare(?pre, seq(?first, ?second), ?post)
+    if hoare(?pre, ?first, ?middle), hoare(?middle, ?second, ?post);
+
+query hoare(equal(lit(2), lit(2)), assign(lit(2)), equal(var, lit(2)));
+query hoare(equal(var, lit(2)), seq(skip, skip), equal(var, lit(2)));
