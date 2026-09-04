@@ -1,0 +1,26 @@
+module SemanticLibraries;
+
+import soda.effects.state;
+import soda.effects.exceptions;
+import soda.probability;
+import soda.collections;
+
+eval apply(
+    do State {
+        n: Int <- state_get;
+        state_tick;
+        return add(@n, 10);
+    },
+    4
+);
+eval do Exceptions {
+    x <- exception_div(8, 2);
+    return add(@x, 1);
+};
+eval exception_catch(exception_div(1, 0), bind(e: ExceptionError, exception_unit(42)));
+eval prob_equal(
+    prob_mix(fraction(1, 2), prob_unit(true), prob_zero),
+    prob_weights(fraction(0, 1), fraction(1, 2))
+);
+eval list_map(bind(x: Int, mul(@x, 2)), [1, 2]);
+eval list_fold(bind(x: Int, bind(y: Int, add(@x, @y))), 0, [1, 2, 3]);
