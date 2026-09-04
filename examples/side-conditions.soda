@@ -1,0 +1,11 @@
+module SideConditions;
+
+sort Expr;
+
+constructor number(Int): Expr;
+
+judgment positive(Expr) kind relation;
+
+infer positive_literal: positive(number(?n)) when gt(?n, 0);
+
+query positive(number(4));
