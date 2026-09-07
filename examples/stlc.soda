@@ -1,0 +1,82 @@
+module STLC;
+
+# Simply typed lambda calculus, using de Bruijn indices (zero = nearest binder).
+# Types in the object language are data, distinct from SODA's signature sorts.
+datatype Index {
+    constructor zero();
+    constructor succ(Index);
+}
+
+datatype Type {
+    constructor bool_type();
+    constructor arrow(Type, Type);
+}
+
+datatype Expr {
+    constructor tt();
+    constructor ff();
+    constructor var(Index);
+    constructor lam(Type, Expr);
+    constructor app(Expr, Expr);
+    constructor cond(Expr, Expr, Expr);
+}
+
+datatype Context {
+    constructor empty();
+    constructor extend(Type, Context);
+}
+
+sort Value;
+sort Env;
+
+constructor yes(): Value;
+constructor no(): Value;
+constructor closure(Type, Expr, Env): Value;
+constructor nil(): Env;
+constructor push(Value, Env): Env;
+
+judgment lookup(Context, Index, Type);
+
+infer lookup_zero: lookup(extend(?t, ?g), zero, ?t);
+infer lookup_succ: lookup(extend(?t, ?g), succ(?n), ?u) if lookup(?g, ?n, ?u);
+
+judgment typing(Context, Expr, Type) kind typing;
+
+notation typing "$0 ⊢ $1 : $2" ascii "$0 |- $1 : $2";
+
+infer t_true: ?g ⊢ tt : bool_type;
+infer t_false: ?g ⊢ ff : bool_type;
+infer t_var: ?g ⊢ var(?n) : ?t if lookup(?g, ?n, ?t);
+infer t_abs: ?g ⊢ lam(?a, ?body) : arrow(?a, ?b) if body: (extend(?a, ?g) ⊢ ?body : ?b);
+infer t_app: ?g ⊢ app(?f, ?arg) : ?b
+    if function: (?g ⊢ ?f : arrow(?a, ?b)), argument: (?g ⊢ ?arg : ?a);
+infer t_cond: ?g ⊢ cond(?c, ?a, ?b) : ?t
+    if test: (?g ⊢ ?c : bool_type), then_branch: (?g ⊢ ?a : ?t), else_branch: (?g ⊢ ?b : ?t);
+
+judgment fetch(Env, Index, Value);
+
+infer fetch_zero: fetch(push(?v, ?env), zero, ?v);
+infer fetch_succ: fetch(push(?v, ?env), succ(?n), ?w) if fetch(?env, ?n, ?w);
+
+judgment evaluates(Env, Expr, Value) kind evaluation;
+
+notation evaluates "$0 ⊢ $1 ⇓ $2" ascii "$0 |- $1 ~> $2";
+
+infer e_true: evaluates(?env, tt, yes);
+infer e_false: evaluates(?env, ff, no);
+infer e_var: evaluates(?env, var(?n), ?v) if fetch(?env, ?n, ?v);
+infer e_abs: evaluates(?env, lam(?t, ?body), closure(?t, ?body, ?env));
+infer e_app: evaluates(?env, app(?f, ?arg), ?result)
+    if function: evaluates(?env, ?f, closure(?t, ?body, ?captured)),
+       argument: evaluates(?env, ?arg, ?v),
+       body: evaluates(push(?v, ?captured), ?body, ?result);
+infer e_cond_true: evaluates(?env, cond(?c, ?a, ?b), ?v)
+    if test: evaluates(?env, ?c, yes), branch: evaluates(?env, ?a, ?v);
+infer e_cond_false: evaluates(?env, cond(?c, ?a, ?b), ?v)
+    if test: evaluates(?env, ?c, no), branch: evaluates(?env, ?b, ?v);
+
+query empty ⊢ lam(bool_type, var(zero)) : ?type;
+query empty ⊢ app(lam(bool_type, var(zero)), tt) : ?type;
+query evaluates(nil, app(lam(bool_type, var(zero)), tt), ?value);
+query evaluates(nil, app(app(lam(bool_type, lam(bool_type, var(succ(zero)))), tt), ff), ?value);
+query evaluates(nil, cond(ff, tt, ff), ?value);
