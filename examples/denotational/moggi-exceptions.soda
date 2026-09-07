@@ -1,0 +1,35 @@
+module MoggiExceptions;
+
+import soda.effects.exceptions;
+
+# Moggi (1991), Examples 1.1/1.4: T(A) = A + E, exception_unit and Kleisli extension.
+datatype Expr {
+    constructor literal(Int);
+    constructor fail(ExceptionError);
+    constructor plus(Expr, Expr);
+    constructor quotient(Expr, Expr);
+}
+
+function meaning(Expr): ExceptionResult {
+    case meaning_literal: (literal(?n)) => exception_unit(?n);
+    case meaning_fail: (fail(?e)) => exception_raised(?e);
+    case meaning_plus:
+        (plus(?a, ?b))
+        => do Exceptions {
+            x <- meaning(?a);
+            y <- meaning(?b);
+            return add(x, y);
+        };
+    case meaning_div:
+        (quotient(?a, ?b))
+        => do Exceptions {
+            x <- meaning(?a);
+            y <- meaning(?b);
+            exception_div(x, y);
+        };
+}
+
+eval meaning(quotient(quotient(literal(1972), literal(2)), literal(23)));
+eval meaning(quotient(literal(1), literal(0)));
+eval meaning(plus(fail(exception_error), quotient(literal(1), literal(0))));
+eval exception_bind(exception_unit(4), bind(x: Int, exception_unit(add(@x, 3))));
