@@ -1,0 +1,33 @@
+module SurfaceSyntax;
+
+import soda.effects.state;
+import soda.effects.exceptions;
+import soda.collections;
+
+record Observation = observation { samples: IntList, outcome: StateResult };
+
+function experiment(Int): Int -> StateResult {
+    case experiment_run:
+        (?offset)
+        => do State {
+            initial <- state_get;
+            state_put(add(initial, ?offset));
+            state_tick;
+            current <- state_get;
+            return current;
+        };
+}
+
+function first_sample(Observation): Int {
+    case first_observation: (observation { outcome: ?result, samples: [?head | ?tail] }) => ?head;
+}
+
+eval observation {
+    outcome: apply(experiment(4), 10),
+    samples: list_map(lambda x: Int. add(@x, 1), [1, 2, 3])
+};
+eval first_sample(observation { samples: [8, 9], outcome: state_answer(0, 0) });
+eval do Exceptions {
+    x <- exception_div(10, 0);
+    return add(x, 1);
+};
