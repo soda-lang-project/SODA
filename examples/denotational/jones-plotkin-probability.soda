@@ -1,0 +1,32 @@
+module JonesPlotkinProbability;
+
+import soda.probability;
+
+# Jones & Plotkin (1989): a finite discrete subprobability valuation fragment.
+# Valuations are exact rational masses on {false,true}; missing mass is divergence.
+datatype Expr {
+    constructor certain(Bool);
+    constructor diverge();
+    constructor coin(Rational, Expr, Expr);
+    constructor branch(Expr, Expr, Expr);
+}
+
+function meaning(Expr): ProbabilityValuation {
+    case meaning_certain: (certain(?b)) => prob_unit(?b);
+    case meaning_diverge: (diverge) => prob_zero;
+    case meaning_coin: (coin(?p, ?a, ?b)) => prob_mix(?p, meaning(?a), meaning(?b));
+    case meaning_branch:
+        (branch(?test, ?yes, ?no))
+        => do Probability {
+            x <- meaning(?test);
+            if(x, meaning(?yes), meaning(?no));
+        };
+}
+
+eval meaning(coin(fraction(1, 2), certain(true), certain(false)));
+eval meaning(coin(fraction(1, 2), certain(true), diverge));
+eval prob_mass(meaning(coin(fraction(1, 2), certain(true), diverge)));
+eval meaning(
+    branch(coin(fraction(1, 2), certain(true), certain(false)), certain(false), certain(true))
+);
+eval prob_le(meaning(diverge), meaning(certain(true)));
