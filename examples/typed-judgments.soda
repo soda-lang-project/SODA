@@ -1,0 +1,29 @@
+module TypedJudgments;
+
+import soda.languages.arithmetic;
+
+judgment triple(Expr, Expr, Expr) kind hoare;
+
+notation triple "{ $0 } $1 { $2 }" ascii "{| $0 |} $1 {| $2 |}";
+
+infer reflexive_triple: { ?e } ?e { ?e };
+
+judgment satisfies(Context, Expr) kind satisfaction;
+
+notation satisfies "$0 ⊨ $1" ascii "$0 |= $1";
+
+infer satisfies_literal: empty ⊨ lit(?n);
+
+query empty ⊢ plus(lit(1), lit(2)) : int_type;
+query empty |- lit(3) : int_type;
+query plus(lit(0), lit(4)) → ?next;
+query lit(5) ⇓ ?value;
+query ⟦ lit(6) ⟧ empty = ?value;
+query { lit(7) } lit(7) { lit(7) };
+query empty ⊨ lit(8);
+
+query [[lit(9)]] empty = ?value;
+query \llbracket lit(10) \rrbracket empty = ?value;
+
+query plus(lit(2), plus(lit(3), lit(4))) ⇓ ?value;
+query ⟦ plus(lit(2), lit(3)) ⟧ empty = ?value;
