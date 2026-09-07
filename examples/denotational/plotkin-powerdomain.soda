@@ -1,0 +1,87 @@
+module PlotkinPowerdomain;
+
+# Plotkin (1976), finite convex powerdomain over the chain low < mid < high.
+# Denotations are nonempty convex sets, represented canonically by endpoints.
+datatype Point {
+    constructor low();
+    constructor mid();
+    constructor high();
+}
+
+datatype Nonempty {
+    constructor single(Point);
+    constructor more(Point, Nonempty);
+}
+
+datatype Power {
+    constructor interval(Point, Point);
+}
+
+datatype Expr {
+    constructor result(Point);
+    constructor choice(Expr, Expr);
+}
+
+function point_le(Point, Point): Bool {
+    case chain_low: (low, ?p) => true;
+    case chain_mid: (mid, ?p) => not(eq(?p, low));
+    case chain_high: (high, ?p) => eq(?p, high);
+}
+
+function minimum(Point, Point): Point {
+    case min_point: (?a, ?b) => if point_le(?a, ?b) then ?a else ?b;
+}
+
+function maximum(Point, Point): Point {
+    case max_point: (?a, ?b) => if point_le(?a, ?b) then ?b else ?a;
+}
+
+function choose(Power, Power): Power {
+    case convex_choice:
+        (interval(?a, ?b), interval(?c, ?d))
+        => interval(minimum(?a, ?c), maximum(?b, ?d));
+}
+
+function hull(Nonempty): Power {
+    case hull_single: (single(?p)) => interval(?p, ?p);
+    case hull_more: (more(?p, ?rest)) => choose(interval(?p, ?p), hull(?rest));
+}
+
+function meaning(Expr): Power {
+    case meaning_result: (result(?p)) => interval(?p, ?p);
+    case meaning_choice: (choice(?a, ?b)) => choose(meaning(?a), meaning(?b));
+}
+
+# Egli--Milner order on these chain intervals is componentwise endpoint order.
+function power_le(Power, Power): Bool {
+    case egli_milner: (interval(?a, ?b), interval(?c, ?d)) =>
+        and(point_le(?a, ?c), point_le(?b, ?d));
+}
+
+function power_equal(Power, Power): Bool {
+    case extensional_equality:
+        (?a, ?b)
+        => and(power_le(?a, ?b), power_le(?b, ?a));
+}
+
+# Kleisli extension on the finite convex powerdomain: include every point.
+# The supplied function must be monotone for a denotational semantic map.
+function extend(Power, Fn(Point, Power)): Power {
+    case extend_low: (interval(low, low), ?f) => apply(?f, low);
+    case extend_mid: (interval(mid, mid), ?f) => apply(?f, mid);
+    case extend_high: (interval(high, high), ?f) => apply(?f, high);
+    case extend_low_mid: (interval(low, mid), ?f) => choose(apply(?f, low), apply(?f, mid));
+    case extend_mid_high: (interval(mid, high), ?f) => choose(apply(?f, mid), apply(?f, high));
+    case extend_all:
+        (interval(low, high), ?f)
+        => choose(apply(?f, low), choose(apply(?f, mid), apply(?f, high)));
+}
+
+eval meaning(choice(result(low), result(high)));
+eval power_equal(
+    meaning(choice(result(low), result(high))),
+    hull(more(low, more(mid, single(high))))
+);
+eval power_le(interval(low, high), interval(high, high));
+eval power_le(interval(high, high), interval(low, high));
+eval extend(interval(low, high), bind(x: Point, interval(@x, @x)));
