@@ -1,0 +1,27 @@
+module StandardLibrary;
+
+import soda.prelude;
+
+proof imported_identity: ?n = nat_add(zero, ?n) {
+    nat_left_zero reverse with { m = ?n };
+}
+
+eval nat_to_int(nat_mul(succ(succ(zero)), succ(succ(succ(zero)))));
+eval list_length(list_append([1, 2], [3]));
+eval rle(radd(fraction(1, 3), fraction(1, 6)), fraction(1, 2));
+eval apply(
+    do State {
+        n <- state_get;
+        state_tick;
+        return add(n, 10);
+    },
+    4
+);
+eval do Exceptions {
+    n <- exception_div(84, 2);
+    return add(n, 1);
+};
+eval prob_equal(
+    prob_mix(fraction(1, 2), prob_unit(true), prob_zero),
+    prob_weights(fraction(0, 1), fraction(1, 2))
+);
