@@ -1,0 +1,4 @@
+module MissingSemicolon;
+
+rule identity: identity(?x) => ?x
+eval identity(42);
