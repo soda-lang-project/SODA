@@ -1,0 +1,7 @@
+module BadProof;
+
+axiom identity: add(?x, 0) = ?x;
+
+proof wrong_instance: add(3, 0) = 3 {
+    identity with {x = 4};
+}
