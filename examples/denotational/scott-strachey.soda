@@ -1,0 +1,84 @@
+module ScottStrachey;
+
+# Scott & Strachey (1971): commands denote strict state transformers; loops
+# denote least fixed points. Exact finite instance over three concrete stores.
+datatype Store {
+    constructor bottom();
+    constructor zero();
+    constructor one();
+    constructor two();
+}
+
+datatype Transformer {
+    constructor trans(Store, Store, Store);
+}
+
+datatype Command {
+    constructor skip();
+    constructor decrement();
+    constructor seq(Command, Command);
+    constructor while_positive(Command);
+}
+
+domain Stores = flat(zero, one, two);
+domain TransformerSpace = functions(Stores, Stores);
+
+map predecessor: Stores -> Stores {
+    bottom => bottom;
+    zero => zero;
+    one => zero;
+    two => one;
+}
+
+function at(Transformer, Store): Store {
+    case at_bottom: (?f, bottom) => bottom;
+    case at_zero: (trans(?a, ?b, ?c), zero) => ?a;
+    case at_one: (trans(?a, ?b, ?c), one) => ?b;
+    case at_two: (trans(?a, ?b, ?c), two) => ?c;
+}
+
+# compose(f,g) = g after f.
+function compose(Transformer, Transformer): Transformer {
+    case composition: (?f, ?g) =>
+        trans(at(?g, at(?f, zero)), at(?g, at(?f, one)), at(?g, at(?f, two)));
+}
+
+function meaning(Command): Transformer {
+    case meaning_skip: (skip) => trans(zero, one, two);
+    case meaning_decrement: (decrement) => trans(zero, zero, one);
+    case meaning_sequence: (seq(?a, ?b)) => compose(meaning(?a), meaning(?b));
+    case meaning_loop:
+        (while_positive(?body))
+        => iterate(meaning(?body), trans(bottom, bottom, bottom));
+}
+
+# F(f)(s) = if s > 0 then f(body(s)) else s; strict on bottom.
+function functional(Transformer, Transformer): Transformer {
+    case loop_functional: (?body, ?f) =>
+        trans(zero, at(?f, at(?body, one)), at(?f, at(?body, two)));
+}
+
+function iterate(Transformer, Transformer): Transformer {
+    case kleene_iteration: (?body, ?f) => settle(?body, ?f, functional(?body, ?f));
+}
+
+function settle(Transformer, Transformer, Transformer): Transformer {
+    case kleene_settle:
+        (?body, ?old, ?next)
+        => if eq(?old, ?next) then ?next else iterate(?body, ?next);
+}
+
+function store_le(Store, Store): Bool {
+    case flat_order: (?a, ?b) => or(eq(?a, bottom), eq(?a, ?b));
+}
+
+function transformer_le(Transformer, Transformer): Bool {
+    case pointwise_order:
+        (trans(?a, ?b, ?c), trans(?x, ?y, ?z))
+        => and(store_le(?a, ?x), and(store_le(?b, ?y), store_le(?c, ?z)));
+}
+
+eval meaning(seq(decrement, decrement));
+eval meaning(while_positive(decrement));
+eval meaning(while_positive(skip));
+eval at(meaning(while_positive(decrement)), two);
