@@ -1,0 +1,26 @@
+module WadlerState;
+
+import soda.effects.state;
+
+# Wadler, Monads for Functional Programming (1992/1995), Sections 2.3/2.8.
+datatype Expr {
+    constructor literal(Int);
+    constructor quotient(Expr, Expr);
+}
+
+function meaning(Expr): Fn(Int, StateResult) {
+    case meaning_literal: (literal(?n)) => state_unit(?n);
+    case meaning_quotient:
+        (quotient(?a, ?b))
+        => do State {
+            x <- meaning(?a);
+            y <- meaning(?b);
+            state_tick;
+            return div(x, y);
+        };
+}
+
+eval apply(meaning(quotient(quotient(literal(1972), literal(2)), literal(23))), 0);
+eval apply(meaning(quotient(literal(8), literal(2))), 10);
+eval apply(state_bind(state_tick, bind(x: Int, state_tick)), 0);
+eval apply(state_unit(7), 12);
