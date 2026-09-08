@@ -1,0 +1,8 @@
+module MultipleErrors;
+
+sort Expr;
+constructor literal(Int): Expr;
+
+eval literal(false);
+eval literl(2);
+eval add(true, 3);
