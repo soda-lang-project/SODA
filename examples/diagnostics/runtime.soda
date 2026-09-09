@@ -1,0 +1,5 @@
+module Runtime;
+
+rule half: half(?n) => div(?n, 0);
+
+eval half(12);
