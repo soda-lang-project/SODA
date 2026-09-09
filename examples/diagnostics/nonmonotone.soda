@@ -1,0 +1,8 @@
+module Nonmonotone;
+
+domain Truth = flat(false, true);
+map broken: Truth -> Truth {
+    bottom => true;
+    false => false;
+    true => true;
+}
