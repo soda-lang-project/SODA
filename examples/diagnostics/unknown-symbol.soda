@@ -1,0 +1,6 @@
+module UnknownSymbol;
+
+sort Expr;
+constructor literal(Int): Expr;
+
+eval literl(42);
