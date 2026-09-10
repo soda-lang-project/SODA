@@ -122,3 +122,34 @@ fn integer_addition_matches_an_exhaustive_independent_small_width_oracle() {
     );
 }
 
+#[test]
+fn undef_is_a_set_and_overflow_and_zero_checks_range_over_all_choices() {
+    let engine = engine();
+    let result = evaluate(
+        &engine,
+        "add_value(2, wrapping, values(2, cons(0, cons(1, end))), values(2, cons(0, cons(1, end))))",
+    );
+    let Term::App(head, args) = result else {
+        panic!("expected values")
+    };
+
+    assert_eq!(head, "values");
+    assert_eq!(number_set(&args[1]), BTreeSet::from([0, 1, 2]));
+    // One overflowing choice poisons the result, even though another is safe.
+    expect(
+        &engine,
+        "add_value(2, nuw, values(2, cons(0, cons(3, end))), values(2, cons(1, end)))",
+        "poison(2)",
+    );
+    expect(
+        &engine,
+        "divide_value(2, values(2, cons(3, end)), values(2, cons(1, cons(0, end))))",
+        "ub",
+    );
+    expect(
+        &engine,
+        "instruction(quotient(2, literal(1), undef), empty)",
+        "out(ub, done)",
+    );
+}
+
