@@ -292,3 +292,37 @@ fn refinement_is_directional_and_covers_every_target_execution() {
     expect(&engine, &format!("refines({frozen}, {undef})"), "false");
 }
 
+#[test]
+fn malformed_widths_and_registers_do_not_turn_into_llvm_ub() {
+    let engine = engine();
+
+    for query in [
+        "run_program(ret(0, literal(0)), empty)",
+        "run_program(ret(9, literal(0)), empty)",
+        "run_program(ret(2, literal(4)), empty)",
+        "run_program(ret(2, literal(-1)), empty)",
+        "run_program(ret(2, reg(0)), empty)",
+        "run_program(ret(2, reg(0)), push(values(1, cons(0, end)), empty))",
+        "run_program(ret(2, reg(0)), push(values(2, end), empty))",
+        "run_program(ret(2, reg(0)), push(values(2, cons(4, end)), empty))",
+    ] {
+        let result = engine.evaluate(&parse_term(query).unwrap(), &Config::default());
+
+        assert!(
+            matches!(result.status, Status::Stuck(_)),
+            "{query}: {result:?}"
+        );
+    }
+
+    let query = parse_term("instruction(sum(2, wrapping, literal(3), literal(1)), empty)").unwrap();
+    let exhausted = engine.evaluate(
+        &query,
+        &Config {
+            fuel: 1,
+            ..Config::default()
+        },
+    );
+
+    assert!(matches!(exhausted.status, Status::Limit(_)));
+}
+
