@@ -253,3 +253,42 @@ fn freeze_is_a_stable_ssa_choice_rather_than_an_undef_value() {
     );
 }
 
+#[test]
+fn refinement_is_directional_and_covers_every_target_execution() {
+    let engine = engine();
+
+    for (query, expected) in [
+        ("value_refines(poison(2), values(2, cons(1, end)))", "true"),
+        ("value_refines(values(2, cons(1, end)), poison(2))", "false"),
+        (
+            "value_refines(values(2, cons(1, cons(2, end))), values(2, cons(1, end)))",
+            "true",
+        ),
+        (
+            "value_refines(values(2, cons(1, end)), values(2, cons(1, cons(2, end))))",
+            "false",
+        ),
+        ("outcome_refines(ub, returned(poison(2)))", "true"),
+        ("outcome_refines(returned(poison(2)), ub)", "false"),
+        (
+            "refines(out(returned(values(2, cons(1, end))), done), out(returned(values(2, cons(1, end))), out(returned(values(2, cons(2, end))), done)))",
+            "false",
+        ),
+        (
+            "refines(instruction(sum(2, nuw, literal(3), literal(1)), empty), instruction(sum(2, wrapping, literal(3), literal(1)), empty))",
+            "true",
+        ),
+        (
+            "refines(instruction(sum(2, wrapping, literal(3), literal(1)), empty), instruction(sum(2, nuw, literal(3), literal(1)), empty))",
+            "false",
+        ),
+    ] {
+        expect(&engine, query, expected);
+    }
+
+    let undef = "run_program(ret(2, undef), empty)";
+    let frozen = "run_program(assign(freeze(2, undef), ret(2, reg(0))), empty)";
+    expect(&engine, &format!("refines({undef}, {frozen})"), "true");
+    expect(&engine, &format!("refines({frozen}, {undef})"), "false");
+}
+
