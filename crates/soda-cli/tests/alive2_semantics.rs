@@ -153,3 +153,50 @@ fn undef_is_a_set_and_overflow_and_zero_checks_range_over_all_choices() {
     );
 }
 
+#[test]
+fn poison_and_immediate_ub_remain_distinct_and_select_masks_only_poison() {
+    let engine = engine();
+
+    for (query, expected) in [
+        (
+            "instruction(sum(2, wrapping, toxic, literal(0)), empty)",
+            "out(returned(poison(2)), done)",
+        ),
+        (
+            "instruction(quotient(2, toxic, literal(1)), empty)",
+            "out(returned(poison(2)), done)",
+        ),
+        (
+            "instruction(quotient(2, toxic, literal(0)), empty)",
+            "out(ub, done)",
+        ),
+        (
+            "instruction(quotient(2, literal(1), toxic), empty)",
+            "out(ub, done)",
+        ),
+        (
+            "instruction(quotient(2, literal(3), literal(2)), empty)",
+            "out(returned(values(2, cons(1, end))), done)",
+        ),
+        (
+            "instruction(select_value(2, literal(1), literal(3), toxic), empty)",
+            "out(returned(values(2, cons(3, end))), done)",
+        ),
+        (
+            "instruction(select_value(2, literal(0), toxic, literal(2)), empty)",
+            "out(returned(values(2, cons(2, end))), done)",
+        ),
+        (
+            "instruction(select_value(2, toxic, literal(3), literal(2)), empty)",
+            "out(returned(poison(2)), done)",
+        ),
+        // The division executes before select, so its UB cannot be masked.
+        (
+            "run_program(assign(quotient(2, literal(1), literal(0)), assign(select_value(2, literal(1), literal(3), reg(0)), ret(2, reg(0)))), empty)",
+            "out(ub, done)",
+        ),
+    ] {
+        expect(&engine, query, expected);
+    }
+}
+
