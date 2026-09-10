@@ -326,3 +326,40 @@ fn malformed_widths_and_registers_do_not_turn_into_llvm_ub() {
     assert!(matches!(exhausted.status, Status::Limit(_)));
 }
 
+#[test]
+fn shipped_demonstrations_execute_in_both_interpreters_and_cli() {
+    let module = load_module_source("<alive2>", SOURCE, std::path::Path::new("."))
+        .unwrap()
+        .module;
+    let engine = engine();
+
+    for query in &module.evaluations {
+        let operational = engine.evaluate(query, &Config::default());
+        let compositional = engine.denote(query, &Config::default());
+
+        assert_eq!(
+            operational.status,
+            Status::NormalForm,
+            "{query}: {operational:?}"
+        );
+        assert_eq!(
+            compositional.status,
+            Status::NormalForm,
+            "{query}: {compositional:?}"
+        );
+        assert_eq!(operational.term, compositional.term, "{query}");
+    }
+
+    let output = Command::new(env!("CARGO_BIN_EXE_soda"))
+        .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
+        .args(["compare", "examples/alive2-integers.soda"])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
