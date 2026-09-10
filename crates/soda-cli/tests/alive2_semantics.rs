@@ -200,3 +200,56 @@ fn poison_and_immediate_ub_remain_distinct_and_select_masks_only_poison() {
     }
 }
 
+#[test]
+fn freeze_is_a_stable_ssa_choice_rather_than_an_undef_value() {
+    let engine = engine();
+
+    for operand in ["undef", "toxic"] {
+        let query = format!(
+            "run_program(assign(freeze(2, {operand}), assign(sum(2, wrapping, reg(0), reg(0)), ret(2, reg(0)))), empty)"
+        );
+        let result = outcomes(&evaluate(&engine, &query));
+
+        assert_eq!(result.len(), 4);
+        let expected: BTreeSet<_> = [0, 2]
+            .map(|n| Term::app("returned", vec![value(2, &[n])]))
+            .into();
+
+        assert_eq!(result.into_iter().collect::<BTreeSet<_>>(), expected);
+    }
+    // Repeated uses of a non-frozen undef register yield every i2 pattern.
+    let query = "run_program(assign(sum(2, wrapping, reg(0), reg(0)), ret(2, reg(0))), push(values(2, cons(0, cons(1, cons(2, cons(3, end))))), empty))";
+    let result = outcomes(&evaluate(&engine, query));
+
+    assert_eq!(result.len(), 1);
+    let Term::App(_, returned) = &result[0] else {
+        panic!("expected returned")
+    };
+
+    let Term::App(_, args) = &returned[0] else {
+        panic!("expected values")
+    };
+
+    assert_eq!(number_set(&args[1]), BTreeSet::from([0, 1, 2, 3]));
+    expect(
+        &engine,
+        "instruction(freeze(2, literal(3)), empty)",
+        "out(returned(values(2, cons(3, end))), done)",
+    );
+    // Separate freezes make independent choices; reusing one freeze does not.
+
+    let independent = evaluate(
+        &engine,
+        "run_program(assign(freeze(1, undef), assign(freeze(1, undef), assign(sum(1, wrapping, reg(0), reg(1)), ret(1, reg(0))))), empty)",
+    );
+    let independent = outcomes(&independent);
+
+    assert_eq!(independent.len(), 4);
+    assert_eq!(
+        independent.into_iter().collect::<BTreeSet<_>>(),
+        [0, 1]
+            .map(|n| Term::app("returned", vec![value(1, &[n])]))
+            .into()
+    );
+}
+
