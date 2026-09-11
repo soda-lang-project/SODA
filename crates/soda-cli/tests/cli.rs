@@ -29,3 +29,27 @@ fn shipped_examples_are_executable() {
     assert!(stdout(&output).contains("result: 42"));
 }
 
+#[test]
+fn proofs_and_relational_derivations_check() {
+    let output = soda(&["prove", "examples/arithmetic.soda"]);
+
+    assert!(output.status.success());
+    assert!(stdout(&output).contains("2 checked proofs"));
+    let output = soda(&["infer", "examples/relations.soda", "--trace"]);
+
+    assert!(
+        output.status.success(),
+        "{} {}",
+        stdout(&output),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(stdout(&output).contains("sum(succ(succ(zero)), succ(zero), succ(succ(succ(zero))))"));
+    assert!(stdout(&output).contains("2 answers, complete"));
+    assert!(stdout(&output).contains("by type_if"));
+    let output = soda(&["infer", "examples/hoare.soda", "--trace"]);
+
+    assert!(output.status.success());
+    assert!(stdout(&output).contains("by hoare_assign"));
+    assert!(stdout(&output).contains("by hoare_sequence"));
+}
+
