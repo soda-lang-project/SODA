@@ -201,3 +201,27 @@ fn clap_rejects_bad_options_without_losing_structured_diagnostics() {
     assert!(!stdout(&output).contains("Usage:"));
 }
 
+#[test]
+fn clap_owns_usage_errors_and_respects_explicit_color() {
+    for color in ["always", "never"] {
+        let output = soda(&[
+            "check",
+            "examples/arithmetic.soda",
+            "--fule",
+            "20",
+            "--color",
+            color,
+        ]);
+        let error = String::from_utf8_lossy(&output.stderr);
+
+        assert_eq!(output.status.code(), Some(2));
+        assert!(error.contains("Usage:"), "{error}");
+        assert!(error.contains("--fuel"), "{error}");
+        assert!(error.contains("unexpected argument"), "{error}");
+        assert_eq!(error.contains('\x1b'), color == "always", "{error}");
+        let help = soda(&["--help", "--color", color]);
+
+        assert!(help.status.success());
+        assert_eq!(stdout(&help).contains('\x1b'), color == "always");
+    }
+}
