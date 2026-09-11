@@ -71,3 +71,49 @@ fn complete_and_truncated_nondeterministic_exploration() {
     assert!(stdout(&output).contains("incomplete exploration"));
 }
 
+#[test]
+fn failure_and_limit_exit_codes_are_not_success() {
+    let negative = soda(&["run", "examples/arithmetic.soda", "-42"]);
+
+    assert!(negative.status.success());
+    assert!(stdout(&negative).contains("result: -42"));
+    assert_eq!(
+        soda(&[
+            "run",
+            "examples/arithmetic.soda",
+            "factorial(6)",
+            "--fuel",
+            "0"
+        ])
+        .status
+        .code(),
+        Some(1)
+    );
+    assert_eq!(
+        soda(&["run", "examples/arithmetic.soda", "div(1, 0)"])
+            .status
+            .code(),
+        Some(1)
+    );
+    assert_eq!(
+        soda(&["run", "examples/arithmetic.soda", "?free"])
+            .status
+            .code(),
+        Some(2)
+    );
+    assert_eq!(
+        soda(&["check", "does-not-exist.soda"]).status.code(),
+        Some(2)
+    );
+    assert_eq!(
+        soda(&["run", "examples/arithmetic.soda", "--depth", "999999"])
+            .status
+            .code(),
+        Some(2)
+    );
+    assert_eq!(
+        soda(&["unknown", "examples/arithmetic.soda"]).status.code(),
+        Some(2)
+    );
+}
+
