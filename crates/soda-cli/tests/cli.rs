@@ -53,3 +53,21 @@ fn proofs_and_relational_derivations_check() {
     assert!(stdout(&output).contains("by hoare_sequence"));
 }
 
+#[test]
+fn complete_and_truncated_nondeterministic_exploration() {
+    let output = soda(&["explore", "examples/concurrency.soda", "--trace"]);
+
+    assert!(
+        output.status.success(),
+        "{} {}",
+        stdout(&output),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(stdout(&output).contains("complete exploration"));
+    assert!(stdout(&output).contains("state(free, done, done)"));
+    let output = soda(&["explore", "examples/concurrency.soda", "--states", "1"]);
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(stdout(&output).contains("incomplete exploration"));
+}
+
