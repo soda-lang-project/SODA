@@ -132,3 +132,41 @@ fn bounded_comparison_does_not_claim_universal_equivalence() {
     assert!(stdout(&soda(&["--help"])).contains("not universal equivalence"));
 }
 
+#[test]
+fn clap_help_and_global_options_work_before_and_after_commands() {
+    for args in [vec![], vec!["--help"], vec!["run", "--help"]] {
+        let output = soda(&args);
+
+        assert!(output.status.success());
+        assert!(stdout(&output).contains("--fuel"));
+
+        if args.len() <= 1 {
+            assert!(stdout(&output).contains("not universal equivalence"));
+        }
+    }
+
+    let version = soda(&["--version"]);
+
+    assert!(version.status.success());
+    assert!(stdout(&version).contains(concat!("soda ", env!("CARGO_PKG_VERSION"))));
+    let output = soda(&[
+        "--diagnostic-format=json",
+        "--fuel=10000",
+        "run",
+        "examples/arithmetic.soda",
+        "-42",
+        "--notation=ascii",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(stdout(&output).contains("result: -42"));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "{\"version\":1,\"diagnostics\":[]}\n"
+    );
+}
+
