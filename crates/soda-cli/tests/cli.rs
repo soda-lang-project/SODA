@@ -170,3 +170,34 @@ fn clap_help_and_global_options_work_before_and_after_commands() {
     );
 }
 
+#[test]
+fn clap_rejects_bad_options_without_losing_structured_diagnostics() {
+    for extra in [
+        vec!["--depth=0"],
+        vec!["--diagnostic-width=241"],
+        vec!["--notation=unknown"],
+        vec!["--fuel=-1"],
+        vec!["--states"],
+        vec!["extra", "term"],
+    ] {
+        let mut args = vec![
+            "--diagnostic-format=json",
+            "check",
+            "examples/arithmetic.soda",
+        ];
+        args.extend(extra);
+        let output = soda(&args);
+        let error = String::from_utf8_lossy(&output.stderr);
+
+        assert_eq!(output.status.code(), Some(2), "{args:?}: {error}");
+        assert!(error.starts_with("{\"version\":1,"), "{error}");
+        assert!(error.contains("\"code\":\"E0100\""), "{error}");
+        assert!(!error.contains('\x1b'));
+    }
+
+    let output = soda(&["run", "examples/arithmetic.soda", "--", "--help"]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(!stdout(&output).contains("Usage:"));
+}
+
