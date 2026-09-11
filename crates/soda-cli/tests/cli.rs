@@ -117,3 +117,18 @@ fn failure_and_limit_exit_codes_are_not_success() {
     );
 }
 
+#[test]
+fn bounded_comparison_does_not_claim_universal_equivalence() {
+    let output = soda(&[
+        "compare",
+        "examples/arithmetic.soda",
+        "factorial(6)",
+        "--fuel",
+        "1",
+    ]);
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(stdout(&output).contains("not established"));
+    assert!(stdout(&soda(&["--help"])).contains("not universal equivalence"));
+}
+
