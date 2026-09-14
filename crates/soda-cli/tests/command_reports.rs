@@ -188,6 +188,20 @@ fn truncated_exploration_and_correspondence_do_not_claim_a_complete_result() {
     assert!(!stdout(&correspondence).contains("counterexample found"));
 }
 
+#[test]
+fn raw_rust_export_remains_unadorned_even_when_color_is_forced() {
+    let output = command()
+        .args(["emit-rust", "examples/arithmetic.soda", "--color", "always"])
+        .output()
+        .unwrap();
+    let text = stdout(&output);
+
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(text.contains("pub fn module()"), "{text}");
+    assert!(!text.contains('\x1b'));
+    assert!(!text.contains("module checked"));
+}
+
 fn assert_panels(text: &str, opening: &str, gutter: &str, closing: &str) {
     let mut open = false;
     let mut panels = 0;
