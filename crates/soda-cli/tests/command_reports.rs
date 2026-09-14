@@ -136,6 +136,23 @@ fn runtime_errors_and_limits_keep_their_distinct_semantic_outcomes() {
     }
 }
 
+#[test]
+fn comparison_counterexamples_are_not_reported_as_unresolved_obligations() {
+    let source =
+        "module Order; rule root: f(g) => 1; rule child: g => 2; rule other: f(2) => 3; eval f(g);";
+    let output = stdin("compare", source, &["--color", "never"]);
+    let text = stdout(&output);
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(text.contains("different normal forms"), "{text}");
+    assert!(
+        text.contains("0 comparisons established; 1 counterexample"),
+        "{text}"
+    );
+    assert!(!text.contains("obligation unresolved"), "{text}");
+    assert!(stderr(&output).contains("E4401"));
+}
+
 fn assert_panels(text: &str, opening: &str, gutter: &str, closing: &str) {
     let mut open = false;
     let mut panels = 0;
