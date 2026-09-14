@@ -225,3 +225,26 @@ fn assert_panels(text: &str, opening: &str, gutter: &str, closing: &str) {
     assert!(!open && panels > 0, "no complete panels: {text}");
 }
 
+#[test]
+fn unicode_panels_keep_their_gutters_across_every_trace_line() {
+    let output = command()
+        .args([
+            "eval",
+            "examples/arithmetic.soda",
+            "add(1,2)",
+            "--trace",
+            "--notation",
+            "unicode",
+            "--color",
+            "never",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success(), "{}", stderr(&output));
+    let text = stdout(&output);
+    assert_panels(&text, "╭─ ", "│", "╰─");
+
+    assert!(text.contains("│     → 3"), "{text}");
+}
+
