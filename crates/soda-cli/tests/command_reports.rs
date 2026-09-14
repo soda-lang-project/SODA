@@ -110,6 +110,32 @@ fn evaluation_steps_and_certificates_show_colored_rule_provenance() {
     }
 }
 
+#[test]
+fn runtime_errors_and_limits_keep_their_distinct_semantic_outcomes() {
+    for (term, extra, code, message, tone) in [
+        (
+            "factorial(6)",
+            vec!["--fuel", "0"],
+            "W4002",
+            "reduction limit reached",
+            "\x1b[93m",
+        ),
+        ("div(1,0)", vec![], "E4001", "evaluation error", "\x1b[91m"),
+    ] {
+        let output = command()
+            .args(["run", "examples/arithmetic.soda", term, "--color", "always"])
+            .args(extra)
+            .output()
+            .unwrap();
+        let text = stdout(&output);
+
+        assert_eq!(output.status.code(), Some(1));
+        assert!(text.contains(&format!("{tone}{message}")), "{text:?}");
+        assert!(!text.contains("normal form reached"));
+        assert!(stderr(&output).contains(code));
+    }
+}
+
 fn assert_panels(text: &str, opening: &str, gutter: &str, closing: &str) {
     let mut open = false;
     let mut panels = 0;
