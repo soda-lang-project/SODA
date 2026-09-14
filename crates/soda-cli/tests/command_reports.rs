@@ -91,6 +91,25 @@ fn every_human_command_uses_the_shared_palette_and_plain_or_json_modes_stay_clea
     }
 }
 
+#[test]
+fn evaluation_steps_and_certificates_show_colored_rule_provenance() {
+    for args in [
+        vec!["run", "examples/arithmetic.soda", "add(1,2)", "--trace"],
+        vec!["prove", "examples/arithmetic.soda", "--trace"],
+    ] {
+        let output = command()
+            .args(&args)
+            .args(["--color", "always"])
+            .output()
+            .unwrap();
+        let text = stdout(&output);
+
+        assert!(output.status.success(), "{text}{}", stderr(&output));
+        assert!(text.contains("\x1b[95mby "), "{text:?}");
+        assert!(text.contains("step 1"), "{text}");
+    }
+}
+
 fn assert_panels(text: &str, opening: &str, gutter: &str, closing: &str) {
     let mut open = false;
     let mut panels = 0;
