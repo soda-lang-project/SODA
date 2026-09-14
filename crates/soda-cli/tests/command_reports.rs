@@ -248,3 +248,31 @@ fn unicode_panels_keep_their_gutters_across_every_trace_line() {
     assert!(text.contains("│     → 3"), "{text}");
 }
 
+#[test]
+fn source_diagnostics_and_clap_help_also_use_light_foregrounds() {
+    let output = command()
+        .args([
+            "check",
+            "examples/diagnostics/wrong-sort.soda",
+            "--color",
+            "always",
+        ])
+        .output()
+        .unwrap();
+    let text = stderr(&output);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        text.contains("\x1b[96m") && text.contains("\x1b[91m"),
+        "{text:?}"
+    );
+    assert!(!text.contains("\x1b[34m"), "{text:?}");
+    let output = command()
+        .args(["--help", "--color", "always"])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert!(stdout(&output).contains("\x1b[96m"));
+    assert!(!stdout(&output).contains("\x1b[34m"));
+}
