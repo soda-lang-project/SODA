@@ -153,6 +153,41 @@ fn comparison_counterexamples_are_not_reported_as_unresolved_obligations() {
     assert!(stderr(&output).contains("E4401"));
 }
 
+#[test]
+fn truncated_exploration_and_correspondence_do_not_claim_a_complete_result() {
+    let exploration = command()
+        .args([
+            "explore",
+            "examples/concurrency.soda",
+            "--states",
+            "1",
+            "--color",
+            "always",
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(exploration.status.code(), Some(1));
+    assert!(stdout(&exploration).contains("\x1b[93mincomplete exploration"));
+    assert!(stdout(&exploration).contains("1 partial graph"));
+    let correspondence = command()
+        .args([
+            "correspond",
+            "examples/correspondence.soda",
+            "negate(meaning)",
+            "--fuel",
+            "0",
+            "--color",
+            "always",
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(correspondence.status.code(), Some(1));
+    assert!(stdout(&correspondence).contains("\x1b[93mcorrespondence not established"));
+    assert!(!stdout(&correspondence).contains("counterexample found"));
+}
+
 fn assert_panels(text: &str, opening: &str, gutter: &str, closing: &str) {
     let mut open = false;
     let mut panels = 0;
