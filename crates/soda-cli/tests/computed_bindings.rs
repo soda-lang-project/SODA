@@ -105,3 +105,37 @@ fn later_witness_cannot_retroactively_supply_an_earlier_computation() {
     assert!(cyclic.verify(&forged).is_err());
 }
 
+#[test]
+fn computation_errors_limits_and_false_results_are_distinct() {
+    let relations = model("module Work; infer calc: value(?n, ?r) let ?r = add(?n, 1);");
+    let query = parse_term("value(2, ?r)").unwrap();
+    let limited = relations.search(
+        &query,
+        &SearchConfig {
+            max_attempts: 1,
+            ..SearchConfig::default()
+        },
+    );
+    assert!(!limited.complete);
+    assert!(limited.answers.is_empty());
+    let exhausted = relations.search(
+        &parse_term("value(2, 9)").unwrap(),
+        &SearchConfig::default(),
+    );
+    assert!(exhausted.complete);
+    assert!(exhausted.answers.is_empty());
+    for expression in ["add(true, 1)", "div(1, 0)", "add(?unknown, 1)"] {
+        let source = format!("module Bad; infer calc: answer(?r) let ?r = {expression};");
+        let result =
+            model(&source).search(&parse_term("answer(?r)").unwrap(), &SearchConfig::default());
+        assert!(!result.complete, "{expression}");
+        assert!(result.answers.is_empty(), "{expression}");
+    }
+    let unresolved = model(
+        "module Missing; function pending(Int): Int; judgment answer(Int) kind relation; infer calc: answer(?r) let ?r = pending(2);",
+    );
+    let result = unresolved.search(&parse_term("answer(?r)").unwrap(), &SearchConfig::default());
+    assert!(!result.complete);
+    assert!(result.answers.is_empty());
+}
+
