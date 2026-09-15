@@ -71,3 +71,37 @@ fn certificates_cannot_omit_bindings_or_change_computed_results() {
     assert!(relations.verify(&open).is_err());
 }
 
+#[test]
+fn later_witness_cannot_retroactively_supply_an_earlier_computation() {
+    let source = "module Order; infer witness: supplied(2); infer bad: answer(?out) if let ?out = add(?later, 1), supplied(?later);";
+    let relations = model(source);
+    let result = relations.search(&parse_term("answer(?q)").unwrap(), &SearchConfig::default());
+    assert!(!result.complete);
+    assert!(result.answers.is_empty());
+    let forged = Derivation {
+        rule: "bad".into(),
+        conclusion: parse_term("answer(3)").unwrap(),
+        substitution: [("out".into(), Term::Int(3)), ("later".into(), Term::Int(2))].into(),
+        premises: vec![Derivation {
+            rule: "witness".into(),
+            conclusion: parse_term("supplied(2)").unwrap(),
+            substitution: Default::default(),
+            premises: vec![],
+        }],
+    };
+    assert!(
+        relations
+            .verify(&forged)
+            .unwrap_err()
+            .contains("later premise")
+    );
+    let cyclic = model(
+        "module Cycle; infer bad: answer(?out) if let ?out = add(?later, 1), let ?later = sub(?out, 1);",
+    );
+    let forged = Derivation {
+        premises: vec![],
+        ..forged
+    };
+    assert!(cyclic.verify(&forged).is_err());
+}
+
