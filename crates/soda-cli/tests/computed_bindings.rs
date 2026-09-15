@@ -139,3 +139,36 @@ fn computation_errors_limits_and_false_results_are_distinct() {
     assert!(result.answers.is_empty());
 }
 
+#[test]
+fn typed_source_arithmetic_requires_values_and_cannot_return_syntax_as_int() {
+    let source = "module Typed; sort Expr; constructor plus(Expr, Expr): Expr; constructor lit(Int): Expr; judgment eval(Expr, Int) kind evaluation; infer literal: eval(lit(?n), ?n); infer addition: eval(plus(?a, ?b), ?r) if eval(?a, ?x), eval(?b, ?y) let ?r = add(?x, ?y);";
+    let relations = model(source);
+    let result = relations.search(
+        &parse_term("eval(plus(lit(2), lit(3)), ?r)").unwrap(),
+        &SearchConfig::default(),
+    );
+    assert!(result.complete);
+    assert_eq!(
+        result.answers[0].term,
+        parse_term("eval(plus(lit(2), lit(3)), 5)").unwrap()
+    );
+    assert!(
+        relations
+            .search_checked(
+                &parse_term("eval(plus(lit(2), lit(3)), add(2, 3))").unwrap(),
+                &SearchConfig::default()
+            )
+            .unwrap()
+            .answers
+            .is_empty()
+    );
+    let wrong = parse_module(
+        "module Bad; judgment value(Int) kind relation; infer calc: value(?r) let ?r = true;",
+    )
+    .unwrap();
+    assert!(
+        Relations::from_module(&wrong)
+            .unwrap_err()
+            .contains("sort mismatch")
+    );
+}
