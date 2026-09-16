@@ -441,3 +441,26 @@ fn all_five_paper_models_check_and_the_shipped_denotations_agree() {
     }
 }
 
+#[test]
+fn five_papers_execute_via_the_cli_denote_command() {
+    for name in [
+        "scott-strachey",
+        "plotkin-powerdomain",
+        "moggi-exceptions",
+        "wadler-state",
+        "jones-plotkin-probability",
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_soda"))
+            .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
+            .args(["denote", &format!("examples/denotational/{name}.soda")])
+            .output()
+            .unwrap();
+
+        assert!(
+            output.status.success(),
+            "{name}: {}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}
