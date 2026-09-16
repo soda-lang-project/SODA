@@ -327,3 +327,88 @@ fn fraction(term: &Term) -> (i64, i64) {
     (*n, *d)
 }
 
+#[test]
+fn probability_has_exact_weights_missing_mass_and_kleisli_laws() {
+    let engine = engine(PROBABILITY);
+
+    for denominator in 1..=4 {
+        for numerator in 0..=denominator {
+            let query = format!(
+                "meaning(coin(fraction({numerator}, {denominator}), certain(true), certain(false)))"
+            );
+            let result = evaluate(&engine, &query);
+            let Term::App(name, args) = result else {
+                panic!("expected valuation")
+            };
+
+            assert_eq!(name, "prob_weights");
+            for (prob_mass, expected) in args.iter().zip([denominator - numerator, numerator]) {
+                let (n, d) = fraction(prob_mass);
+
+                assert_eq!(n * denominator, expected * d);
+            }
+
+            expect(
+                &engine,
+                &format!("rle(prob_mass({query}), fraction(1, 1))"),
+                "true",
+            );
+        }
+    }
+
+    expect(
+        &engine,
+        "prob_equal(meaning(coin(fraction(1, 2), certain(true), diverge)), prob_weights(fraction(0, 1), fraction(1, 2)))",
+        "true",
+    );
+    expect(
+        &engine,
+        "rle(prob_mass(meaning(coin(fraction(1, 2), certain(true), diverge))), fraction(1, 2))",
+        "true",
+    );
+    expect(
+        &engine,
+        "prob_le(prob_unit(true), meaning(diverge))",
+        "false",
+    );
+    let f = "bind(x: Bool, if(@x, prob_unit(false), meaning(coin(fraction(1, 2), certain(true), diverge))))";
+    let g = "bind(x: Bool, if(@x, meaning(diverge), prob_unit(true)))";
+
+    for b in ["false", "true"] {
+        expect(
+            &engine,
+            &format!("prob_equal(prob_bind(prob_unit({b}), {f}), apply({f}, {b}))"),
+            "true",
+        );
+    }
+
+    for m in [
+        "prob_unit(false)",
+        "prob_unit(true)",
+        "meaning(diverge)",
+        "meaning(coin(fraction(1, 2), certain(true), certain(false)))",
+    ] {
+        expect(
+            &engine,
+            &format!("prob_equal(prob_bind({m}, bind(x: Bool, prob_unit(@x))), {m})"),
+            "true",
+        );
+        // Denotational evaluation avoids duplicating intermediate rational expressions.
+
+        let query = format!(
+            "prob_equal(prob_bind(prob_bind({m}, {f}), {g}), prob_bind({m}, bind(a: Bool, prob_bind(apply({f}, @a), {g}))))"
+        );
+        let result = engine.denote(&parse_term(&query).unwrap(), &Config::default());
+
+        assert_eq!(result.status, Status::NormalForm, "{query}: {result:?}");
+        assert_eq!(result.term, Term::Bool(true));
+    }
+
+    let invalid = engine.evaluate(
+        &parse_term("meaning(coin(fraction(2, 1), certain(true), certain(false)))").unwrap(),
+        &Config::default(),
+    );
+
+    assert!(matches!(invalid.status, Status::Stuck(_)));
+}
+
