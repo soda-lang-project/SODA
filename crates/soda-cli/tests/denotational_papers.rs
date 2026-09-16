@@ -134,6 +134,70 @@ fn interval(a: usize, b: usize) -> String {
     format!("interval({}, {})", points[a], points[b])
 }
 
+#[test]
+fn plotkin_convex_sets_have_egli_milner_order_and_choice_laws() {
+    let engine = engine(PLOTKIN);
+    let intervals: Vec<_> = (0..3).flat_map(|a| (a..3).map(move |b| (a, b))).collect();
+
+    for &(a, b) in &intervals {
+        let x = interval(a, b);
+        expect(&engine, &format!("choose({x}, {x})"), &x);
+        expect(
+            &engine,
+            &format!("extend({x}, bind(p: Point, interval(@p, @p)))"),
+            &x,
+        );
+
+        for &(c, d) in &intervals {
+            let y = interval(c, d);
+            // The defining quantified set order, evaluated independently.
+            let em = (a..=b).all(|x| (c..=d).any(|y| x <= y))
+                && (c..=d).all(|y| (a..=b).any(|x| x <= y));
+
+            assert_eq!(
+                evaluate(&engine, &format!("power_le({x}, {y})")),
+                Term::Bool(em)
+            );
+            expect(
+                &engine,
+                &format!("choose({x}, {y})"),
+                &interval(a.min(c), b.max(d)),
+            );
+            equal(
+                &engine,
+                &format!("choose({x}, {y})"),
+                &format!("choose({y}, {x})"),
+            );
+
+            for &(e, f) in &intervals {
+                let z = interval(e, f);
+                equal(
+                    &engine,
+                    &format!("choose(choose({x}, {y}), {z})"),
+                    &format!("choose({x}, choose({y}, {z}))"),
+                );
+            }
+        }
+    }
+    // Convex closure adds mid; the two-point set is not the canonical denotation.
+    equal(
+        &engine,
+        "hull(more(low, single(high)))",
+        "hull(more(low, more(mid, single(high))))",
+    );
+    expect(
+        &engine,
+        "power_le(interval(high, high), interval(low, high))",
+        "false",
+    );
+    let kernel = "bind(p: Point, if(eq(@p, low), interval(low, mid), interval(high, high)))";
+    expect(
+        &engine,
+        &format!("extend(interval(low, high), {kernel})"),
+        "interval(low, high)",
+    );
+}
+
 fn fraction(term: &Term) -> (i64, i64) {
     let Term::App(name, args) = term else {
         panic!("expected fraction: {term}")
