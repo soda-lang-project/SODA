@@ -254,6 +254,64 @@ fn moggi_exception_model_obeys_the_three_monad_laws_and_short_circuits() {
     );
 }
 
+#[test]
+fn wadler_denotations_are_state_functions_with_monad_laws_and_correct_counts() {
+    let engine = engine(WADLER);
+    expect(
+        &engine,
+        "apply(meaning(quotient(quotient(literal(1972), literal(2)), literal(23))), 0)",
+        "state_answer(42, 2)",
+    );
+    for a in 0..=4 {
+        for b in 1..=3 {
+            for initial in [-1, 0, 7] {
+                expect(
+                    &engine,
+                    &format!("apply(meaning(quotient(literal({a}), literal({b}))), {initial})"),
+                    &format!("state_answer({}, {})", a / b, initial + 1),
+                );
+            }
+        }
+    }
+
+    let f = "bind(x: Int, state_bind(state_tick, bind(u: Int, state_unit(add(@x, 1)))))";
+    let g = "bind(x: Int, state_bind(state_tick, bind(u: Int, state_unit(mul(@x, 2)))))";
+
+    for state in [0, 5] {
+        equal(
+            &engine,
+            &format!("apply(state_bind(state_unit(3), {f}), {state})"),
+            &format!("apply(apply({f}, 3), {state})"),
+        );
+
+        for m in [
+            "state_unit(2)",
+            "state_tick",
+            "meaning(quotient(literal(8), literal(2)))",
+        ] {
+            equal(
+                &engine,
+                &format!("apply(state_bind({m}, bind(x: Int, state_unit(@x))), {state})"),
+                &format!("apply({m}, {state})"),
+            );
+            equal(
+                &engine,
+                &format!("apply(state_bind(state_bind({m}, {f}), {g}), {state})"),
+                &format!(
+                    "apply(state_bind({m}, bind(a: Int, state_bind(apply({f}, @a), {g}))), {state})"
+                ),
+            );
+        }
+    }
+
+    let undefined = engine.evaluate(
+        &parse_term("apply(meaning(quotient(literal(1), literal(0))), 0)").unwrap(),
+        &Config::default(),
+    );
+
+    assert!(matches!(undefined.status, Status::Error(_)));
+}
+
 fn fraction(term: &Term) -> (i64, i64) {
     let Term::App(name, args) = term else {
         panic!("expected fraction: {term}")
