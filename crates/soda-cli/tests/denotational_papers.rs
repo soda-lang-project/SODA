@@ -412,3 +412,32 @@ fn probability_has_exact_weights_missing_mass_and_kleisli_laws() {
     assert!(matches!(invalid.status, Status::Stuck(_)));
 }
 
+#[test]
+fn all_five_paper_models_check_and_the_shipped_denotations_agree() {
+    for source in [SCOTT, PLOTKIN, MOGGI, WADLER, PROBABILITY] {
+        let module = load_module_source("<paper>", source, std::path::Path::new("."))
+            .unwrap()
+            .module;
+        let engine = engine(source);
+
+        for term in &module.evaluations {
+            let a = engine.evaluate(term, &Config::default());
+            let b = engine.denote(term, &Config::default());
+
+            assert_eq!(
+                a.status,
+                Status::NormalForm,
+                "{}: {term}: {a:?}",
+                module.name
+            );
+            assert_eq!(
+                b.status,
+                Status::NormalForm,
+                "{}: {term}: {b:?}",
+                module.name
+            );
+            assert_eq!(a.term, b.term, "{}: {term}", module.name);
+        }
+    }
+}
+
