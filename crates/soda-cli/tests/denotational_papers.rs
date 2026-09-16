@@ -198,6 +198,62 @@ fn plotkin_convex_sets_have_egli_milner_order_and_choice_laws() {
     );
 }
 
+#[test]
+fn moggi_exception_model_obeys_the_three_monad_laws_and_short_circuits() {
+    let engine = engine(MOGGI);
+    let kernels = [
+        "bind(x: Int, exception_unit(add(@x, 1)))",
+        "bind(x: Int, exception_raised(exception_error))",
+        "bind(x: Int, exception_div(12, @x))",
+    ];
+
+    for n in -2..=2 {
+        for f in kernels {
+            equal(
+                &engine,
+                &format!("exception_bind(exception_unit({n}), {f})"),
+                &format!("apply({f}, {n})"),
+            );
+        }
+    }
+
+    for m in [
+        "exception_returned(0)",
+        "exception_returned(2)",
+        "exception_raised(exception_error)",
+        "exception_raised(exception_zero_divisor)",
+    ] {
+        equal(
+            &engine,
+            &format!("exception_bind({m}, bind(x: Int, exception_unit(@x)))"),
+            m,
+        );
+
+        for f in kernels {
+            for g in kernels {
+                equal(
+                    &engine,
+                    &format!("exception_bind(exception_bind({m}, {f}), {g})"),
+                    &format!(
+                        "exception_bind({m}, bind(a: Int, exception_bind(apply({f}, @a), {g})))"
+                    ),
+                );
+            }
+        }
+    }
+
+    expect(
+        &engine,
+        "meaning(plus(fail(exception_error), quotient(literal(1), literal(0))))",
+        "exception_raised(exception_error)",
+    );
+    expect(
+        &engine,
+        "meaning(quotient(literal(1), literal(0)))",
+        "exception_raised(exception_zero_divisor)",
+    );
+}
+
 fn fraction(term: &Term) -> (i64, i64) {
     let Term::App(name, args) = term else {
         panic!("expected fraction: {term}")
