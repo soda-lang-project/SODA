@@ -17,3 +17,28 @@ fn sort_diagnostics_point_to_the_argument_and_relate_its_signature() {
     assert!(!text.contains('\x1b'));
 }
 
+#[test]
+fn spelling_and_missing_terminator_fixes_show_correct_source_previews() {
+    let output = run(&["check", "examples/diagnostics/unknown-symbol.soda"]);
+    let text = stderr(&output);
+
+    assert!(text.contains("did you mean `literal`?"));
+    assert!(text.contains("6 | eval literal(42);"), "{text}");
+    let output = run(&["check", "examples/diagnostics/missing-semicolon.soda"]);
+    let text = stderr(&output);
+
+    assert!(text.contains("expected ';'"));
+    assert!(
+        text.contains("3 | rule identity: identity(?x) => ?x;"),
+        "{text}"
+    );
+    let output = stdin(
+        "module M; function f(Int): Booll;",
+        &["--diagnostic-format", "json"],
+    );
+    let text = stderr(&output);
+
+    assert!(text.contains("\"replacement\":\"Bool\""));
+    assert!(text.contains("\"start\":27,\"end\":32"), "{text}");
+}
+
