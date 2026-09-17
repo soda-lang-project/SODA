@@ -126,3 +126,27 @@ fn machine_output_is_one_ansi_free_document_even_with_multiple_errors_or_color()
     assert_eq!(stderr(&output), "{\"version\":1,\"diagnostics\":[]}\n");
 }
 
+#[test]
+fn colors_ascii_and_stdin_locations_work_without_terminal_assumptions() {
+    let source = "module Πρόβλημα;\nfunction f(Int): Int;\neval f(false);\n";
+    let output = stdin(source, &["--diagnostic-style", "ascii", "--color", "never"]);
+    let text = stderr(&output);
+
+    assert!(text.contains("--> <stdin>:3:8"), "{text}");
+    assert!(!text.contains('│'));
+    assert!(!text.contains('\x1b'));
+    let output = stdin(source, &["--color", "always"]);
+
+    assert!(stderr(&output).contains("\x1b["));
+    assert!(stderr(&output).contains("[E1001]"));
+    let output = run(&[
+        "run",
+        "examples/bindings.soda",
+        "apply(bind(x: Int, @x), false)",
+    ]);
+    let text = stderr(&output);
+
+    assert!(text.contains("<term argument>"));
+    assert!(text.contains("expected `Int`, found `Bool`"), "{text}");
+}
+
