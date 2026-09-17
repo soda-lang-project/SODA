@@ -42,3 +42,22 @@ fn spelling_and_missing_terminator_fixes_show_correct_source_previews() {
     assert!(text.contains("\"start\":27,\"end\":32"), "{text}");
 }
 
+#[test]
+fn independent_errors_are_ordered_and_the_report_has_an_error_cap() {
+    let output = run(&["check", "examples/diagnostics/multiple-errors.soda"]);
+    let text = stderr(&output);
+
+    assert_eq!(text.matches("error[").count(), 3);
+    assert!(text.find(":6:14").unwrap() < text.find(":7:6").unwrap());
+    assert!(text.find(":7:6").unwrap() < text.find(":8:10").unwrap());
+    let source = format!(
+        "module M; function f(Int): Int; {}",
+        "eval f(false);".repeat(23)
+    );
+    let output = stdin(&source, &[]);
+    let text = stderr(&output);
+
+    assert_eq!(text.matches("error[E1001]").count(), 20);
+    assert!(text.contains("3 further sort errors were omitted"));
+}
+
