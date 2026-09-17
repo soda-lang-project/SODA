@@ -150,3 +150,30 @@ fn colors_ascii_and_stdin_locations_work_without_terminal_assumptions() {
     assert!(text.contains("expected `Int`, found `Bool`"), "{text}");
 }
 
+#[test]
+fn inference_model_domain_and_induction_failures_get_specific_guidance() {
+    let output = run(&[
+        "infer",
+        "examples/side-conditions.soda",
+        "positive(number(0))",
+    ]);
+
+    assert!(stderr(&output).contains("error[E4102]"));
+    let output = run(&["infer", "examples/relations.soda", "--fuel", "0"]);
+
+    assert!(stderr(&output).contains("warning[W4101]"));
+    let output = run(&["explore", "examples/concurrency.soda", "--states", "1"]);
+
+    assert!(stderr(&output).contains("warning[W4301]"));
+    let output = run(&["check", "examples/diagnostics/nonmonotone.soda"]);
+
+    assert!(stderr(&output).contains("error[E3002]"));
+    assert!(stderr(&output).contains("bottom <= false"));
+    assert!(!stderr(&output).contains("broken: broken:"));
+    let source = "module M; datatype Nat; constructor zero(): Nat; constructor succ(Nat): Nat; function f(Nat): Nat; induction p on ?n: Nat: f(?n) = ?n { case zero {} }";
+    let output = stdin(source, &[]);
+
+    assert!(stderr(&output).contains("error[E2101]"));
+    assert!(stderr(&output).contains("missing cases: succ"));
+}
+
