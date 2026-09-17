@@ -98,3 +98,31 @@ fn runtime_and_resource_failures_are_source_aware_and_keep_exit_codes() {
     assert!(text.contains("does not establish divergence"));
 }
 
+#[test]
+fn machine_output_is_one_ansi_free_document_even_with_multiple_errors_or_color() {
+    let output = run(&[
+        "check",
+        "examples/diagnostics/multiple-errors.soda",
+        "--diagnostic-format",
+        "json",
+        "--color",
+        "always",
+    ]);
+    let text = stderr(&output);
+
+    assert!(text.starts_with("{\"version\":1,\"diagnostics\":["));
+    assert!(text.ends_with("]}\n"));
+    assert_eq!(text.matches("\"severity\":\"error\"").count(), 3);
+    assert!(text.contains("\"source\":\"examples/diagnostics/multiple-errors.soda\""));
+    assert!(!text.contains('\x1b'));
+    let output = run(&[
+        "check",
+        "examples/arithmetic.soda",
+        "--diagnostic-format",
+        "json",
+    ]);
+
+    assert!(output.status.success());
+    assert_eq!(stderr(&output), "{\"version\":1,\"diagnostics\":[]}\n");
+}
+
