@@ -74,3 +74,27 @@ fn proof_diagnostics_explain_the_wrong_instantiation_and_reference_the_axiom() {
     assert!(text.contains("the referenced equation is declared here"));
 }
 
+#[test]
+fn runtime_and_resource_failures_are_source_aware_and_keep_exit_codes() {
+    let error = run(&["run", "examples/diagnostics/runtime.soda"]);
+    let text = stderr(&error);
+
+    assert_eq!(error.status.code(), Some(1));
+    assert!(text.contains("error[E4001]"));
+    assert!(text.contains("div by zero"));
+    assert!(text.contains("last applied rule"), "{text}");
+    let limited = run(&[
+        "run",
+        "examples/arithmetic.soda",
+        "factorial(6)",
+        "--fuel",
+        "0",
+    ]);
+    let text = stderr(&limited);
+
+    assert_eq!(limited.status.code(), Some(1));
+    assert!(text.contains("warning[W4002]"));
+    assert!(text.contains("<term argument>:1:1"));
+    assert!(text.contains("does not establish divergence"));
+}
+
