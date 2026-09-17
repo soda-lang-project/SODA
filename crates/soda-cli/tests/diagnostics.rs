@@ -61,3 +61,16 @@ fn independent_errors_are_ordered_and_the_report_has_an_error_cap() {
     assert!(text.contains("3 further sort errors were omitted"));
 }
 
+#[test]
+fn proof_diagnostics_explain_the_wrong_instantiation_and_reference_the_axiom() {
+    let output = run(&["prove", "examples/diagnostics/bad-proof.soda"]);
+    let text = stderr(&output);
+
+    assert!(text.contains("error[E2001]"));
+    assert!(text.contains("`?x` has the wrong instance here"), "{text}");
+    assert!(text.contains("expected: add(3, 0)"));
+    assert!(text.contains("found:    add(4, 0)"));
+    assert!(text.contains("instantiate `?x` with `3`"));
+    assert!(text.contains("the referenced equation is declared here"));
+}
+
