@@ -257,3 +257,21 @@ fn alive_inference_without_queries_explains_the_command_mismatch() {
     assert!(!text.contains("soda run"), "{text}");
 }
 
+#[test]
+fn invalid_alive_rule_names_the_definition_and_the_sort_mismatch() {
+    let source = include_str!("../../../examples/alive2-integers.soda")
+        .replace("ge(add(?a, ?b), pow2(?w));", "0;");
+
+    assert_ne!(
+        source,
+        include_str!("../../../examples/alive2-integers.soda")
+    );
+    let output = stdin(&source, &[]);
+    let text = stderr(&output);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(text.contains("rule `overflow_nuw`"), "{text}");
+    assert!(text.contains("expected `Bool`, found `Int`"), "{text}");
+    assert!(text.contains("<stdin>:"), "{text}");
+}
+
