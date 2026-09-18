@@ -275,3 +275,14 @@ fn invalid_alive_rule_names_the_definition_and_the_sort_mismatch() {
     assert!(text.contains("<stdin>:"), "{text}");
 }
 
+#[test]
+fn fallback_validation_error_promotes_the_rule_and_reason_to_the_heading() {
+    let output = stdin("module Invalid;\nrule bad_add: add(?a, ?b) => ?a;\n", &[]);
+    let text = stderr(&output);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(text.contains("rule `bad_add` failed validation:"), "{text}");
+    assert!(text.contains("redefines reserved builtin add"), "{text}");
+    assert!(text.contains("<stdin>:2:"), "{text}");
+    assert!(!text.contains("could not check this definition"), "{text}");
+}
