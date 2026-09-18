@@ -217,3 +217,43 @@ fn different_normal_forms_are_reported_as_a_counterexample_not_an_empty_json_rep
     assert!(text.contains("compositional: 3"));
 }
 
+#[test]
+fn alive_inference_without_queries_explains_the_command_mismatch() {
+    for format in ["human", "json"] {
+        let output = run(&[
+            "infer",
+            "examples/alive2-integers.soda",
+            "--notation",
+            "unicode",
+            "--trace",
+            "--color",
+            "always",
+            "--diagnostic-format",
+            format,
+        ]);
+        let text = stderr(&output);
+
+        assert_eq!(output.status.code(), Some(2));
+        assert!(text.contains("E4103"), "{text}");
+        assert!(
+            text.contains("`infer` has no queries to run in module `Alive2Integers`"),
+            "{text}"
+        );
+        assert!(text.contains("this is an `eval` declaration"), "{text}");
+        assert!(text.contains("soda run"), "{text}");
+        assert!(text.contains("alive2-integers.soda"), "{text}");
+        assert!(!text.contains("could not check this definition"), "{text}");
+        assert!(!text.contains("failed validation"), "{text}");
+    }
+
+    let output = stdin_command("infer", "module Empty;", &[]);
+    let text = stderr(&output);
+
+    assert!(
+        text.contains("`infer` has no queries to run in module `Empty`"),
+        "{text}"
+    );
+    assert!(text.contains("add a `query` declaration"), "{text}");
+    assert!(!text.contains("soda run"), "{text}");
+}
+
