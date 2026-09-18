@@ -204,3 +204,16 @@ fn a_warning_never_hides_a_later_fatal_error() {
     assert!(text.contains("this input still contains rule metavariables"));
 }
 
+#[test]
+fn different_normal_forms_are_reported_as_a_counterexample_not_an_empty_json_report() {
+    let source =
+        "module M; rule root: f(g) => 1; rule child: g => 2; rule other: f(2) => 3; eval f(g);";
+    let output = stdin_command("compare", source, &["--diagnostic-format", "json"]);
+    let text = stderr(&output);
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(text.contains("\"code\":\"E4401\""), "{text}");
+    assert!(text.contains("operational:   1"));
+    assert!(text.contains("compositional: 3"));
+}
+
