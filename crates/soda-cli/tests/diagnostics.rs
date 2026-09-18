@@ -192,3 +192,15 @@ fn command_errors_have_spelling_help_and_io_errors_have_a_separate_code() {
     assert!(stderr(&output).contains("similar argument"));
 }
 
+#[test]
+fn a_warning_never_hides_a_later_fatal_error() {
+    let source = "module M; rule loop: loop => loop; eval loop; eval ?missing;";
+    let output = stdin_command("run", source, &["--fuel", "0"]);
+    let text = stderr(&output);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(text.contains("warning[W4002]"), "{text}");
+    assert!(text.contains("error[E1201]"), "{text}");
+    assert!(text.contains("this input still contains rule metavariables"));
+}
+
