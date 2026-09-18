@@ -177,3 +177,18 @@ fn inference_model_domain_and_induction_failures_get_specific_guidance() {
     assert!(stderr(&output).contains("missing cases: succ"));
 }
 
+#[test]
+fn command_errors_have_spelling_help_and_io_errors_have_a_separate_code() {
+    let output = run(&["chek", "examples/arithmetic.soda"]);
+
+    assert!(stderr(&output).contains("check"));
+    assert!(stderr(&output).contains("similar subcommand"));
+    let output = run(&["check", "not-a-real-file.soda"]);
+
+    assert!(stderr(&output).contains("error[E0101]"));
+    let output = run(&["check", "examples/arithmetic.soda", "--fule", "20"]);
+
+    assert!(stderr(&output).contains("--fuel"));
+    assert!(stderr(&output).contains("similar argument"));
+}
+
