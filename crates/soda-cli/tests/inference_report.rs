@@ -35,3 +35,28 @@ fn successful_queries_have_goals_and_checked_derivations_without_repeated_ground
     }
 }
 
+#[test]
+fn unicode_and_ascii_traces_preserve_labeled_tree_edges() {
+    let source = "module Tree; infer first: a; infer second: b; infer root: both if left: a, right: b; query both;";
+
+    for (notation, left, right) in [
+        ("unicode", "├─ left:", "└─ right:"),
+        ("ascii", "+- left:", "`- right:"),
+    ] {
+        let output = infer(
+            source,
+            &["--trace", "--notation", notation, "--color", "never"],
+        );
+        let text = stdout(&output);
+
+        assert!(output.status.success(), "{}", stderr(&output));
+        assert!(text.contains(left) && text.contains(right), "{text}");
+        assert!(
+            text.contains("by first") && text.contains("by second"),
+            "{text}"
+        );
+        assert_eq!(text.matches("by root").count(), 1);
+        assert!(!text.contains('\x1b'));
+    }
+}
+
