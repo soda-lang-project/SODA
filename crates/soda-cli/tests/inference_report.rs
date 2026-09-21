@@ -60,3 +60,33 @@ fn unicode_and_ascii_traces_preserve_labeled_tree_edges() {
     }
 }
 
+#[test]
+fn completed_search_and_incomplete_search_keep_goals_distinct() {
+    let source = "module Mixed; infer fact: valid; query valid; query absent;";
+    let output = infer(source, &["--color", "never"]);
+    let text = stdout(&output);
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(text.contains("goal 1/2\n|\n| valid"), "{text}");
+    assert!(text.contains("goal 2/2\n|\n| absent"), "{text}");
+    assert!(text.contains("no derivation found"));
+    assert!(
+        text.contains("1 goal resolved; 1 goal without a derivation"),
+        "{text}"
+    );
+    assert!(stderr(&output).contains("error[E4102]"));
+    let output = infer(source, &["--fuel", "0", "--color", "never"]);
+    let text = stdout(&output);
+
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(text.matches("goal remains unresolved").count(), 2, "{text}");
+    assert!(
+        text.contains("0 goals resolved; 2 unresolved goals"),
+        "{text}"
+    );
+    assert!(text.contains("2 incomplete searches"));
+    assert!(text.contains("search limit reached; goal remains unresolved"));
+    assert!(!text.contains("no derivation found"));
+    assert!(stderr(&output).contains("warning[W4101]"));
+}
+
