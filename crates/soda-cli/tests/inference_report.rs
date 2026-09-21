@@ -90,3 +90,21 @@ fn completed_search_and_incomplete_search_keep_goals_distinct() {
     assert!(stderr(&output).contains("warning[W4101]"));
 }
 
+#[test]
+fn an_answer_is_established_even_when_further_enumeration_is_incomplete() {
+    let output = infer(
+        "module Partial; infer fact: valid; infer again: valid if valid; query valid;",
+        &["--fuel", "1", "--color", "never"],
+    );
+    let text = stdout(&output);
+
+    assert!(output.status.success(), "{text}{}", stderr(&output));
+    assert!(text.contains("goal 1/1\n|\n| valid"), "{text}");
+    assert!(text.contains("1 answer, incomplete search"), "{text}");
+    assert!(
+        text.contains("1 incomplete search; additional answers may remain undiscovered"),
+        "{text}"
+    );
+    assert!(stderr(&output).contains("warning[W4101]"));
+}
+
