@@ -132,3 +132,23 @@ fn forced_color_applies_to_successful_stdout_and_json_mode_remains_ansi_free() {
     assert_eq!(stderr(&output), "{\"version\":1,\"diagnostics\":[]}\n");
 }
 
+#[test]
+fn derivation_counts_are_distinct_from_resolved_goal_counts() {
+    let output = infer(
+        "module Alternatives; infer first: choice(one); infer second: choice(two); query choice(?x);",
+        &["--trace", "--color", "never"],
+    );
+    let text = stdout(&output);
+
+    assert!(output.status.success(), "{text}{}", stderr(&output));
+    assert!(
+        text.contains("derivation 1/2 checked") && text.contains("derivation 2/2 checked"),
+        "{text}"
+    );
+    assert!(
+        text.contains("2 derivations checked\n1 goal resolved;"),
+        "{text}"
+    );
+    assert!(text.contains("by first") && text.contains("by second"));
+}
+
