@@ -108,3 +108,27 @@ fn an_answer_is_established_even_when_further_enumeration_is_incomplete() {
     assert!(stderr(&output).contains("warning[W4101]"));
 }
 
+#[test]
+fn forced_color_applies_to_successful_stdout_and_json_mode_remains_ansi_free() {
+    let source = "module Color; infer fact: valid; query valid;";
+    let output = infer(source, &["--color", "always"]);
+    let text = stdout(&output);
+
+    assert!(output.status.success());
+    assert!(text.contains("\x1b[92mderivation checked"), "{text:?}");
+    let output = infer(source, &[]);
+
+    assert!(
+        !stdout(&output).contains('\x1b'),
+        "captured auto output must remain plain"
+    );
+    let output = infer(
+        source,
+        &["--color", "always", "--diagnostic-format", "json"],
+    );
+
+    assert!(output.status.success());
+    assert!(!stdout(&output).contains('\x1b'));
+    assert_eq!(stderr(&output), "{\"version\":1,\"diagnostics\":[]}\n");
+}
+
