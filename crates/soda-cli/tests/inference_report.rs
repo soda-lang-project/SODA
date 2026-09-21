@@ -152,3 +152,20 @@ fn derivation_counts_are_distinct_from_resolved_goal_counts() {
     assert!(text.contains("by first") && text.contains("by second"));
 }
 
+#[test]
+fn incomplete_conditions_do_not_misreport_a_resource_limit() {
+    let output = infer(
+        "module Condition; infer guarded: valid when eq(div(1, 0), 1); query valid;",
+        &["--color", "never"],
+    );
+    let text = stdout(&output);
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        text.contains("search incomplete; goal remains unresolved"),
+        "{text}"
+    );
+    assert!(!text.contains("search limit reached"), "{text}");
+    assert!(!text.contains("no derivation found"), "{text}");
+}
+
