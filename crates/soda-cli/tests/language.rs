@@ -126,3 +126,29 @@ fn induction_and_exact_finite_domains_have_checked_results() {
     assert!(text(&output).contains("correspondence not established"));
 }
 
+#[test]
+fn notation_output_and_named_premises_are_visible() {
+    let unicode = soda(&[
+        "infer",
+        "examples/typed-judgments.soda",
+        "--notation",
+        "unicode",
+        "--trace",
+    ]);
+
+    assert!(unicode.status.success(), "{}", text(&unicode));
+    assert!(text(&unicode).contains('⊢'));
+    assert!(text(&unicode).contains('⟦'));
+    assert!(text(&unicode).contains("left:"));
+    let ascii = soda(&[
+        "infer",
+        "examples/typed-judgments.soda",
+        "--notation",
+        "ascii",
+    ]);
+
+    assert!(ascii.status.success());
+    assert!(text(&ascii).contains("|-"));
+    assert!(!text(&ascii).contains('⊢'));
+}
+
