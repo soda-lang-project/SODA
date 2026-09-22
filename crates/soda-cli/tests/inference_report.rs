@@ -169,3 +169,17 @@ fn incomplete_conditions_do_not_misreport_a_resource_limit() {
     assert!(!text.contains("no derivation found"), "{text}");
 }
 
+#[test]
+fn goals_rules_and_search_outcomes_have_semantic_colors() {
+    let source = "module Palette; infer fact: valid; query valid; query absent;";
+    let output = infer(source, &["--trace", "--color", "always"]);
+    let text = stdout(&output);
+
+    assert!(text.contains("\x1b[96mgoal 1/2"), "{text:?}");
+    assert!(text.contains("\x1b[95mby fact"), "{text:?}");
+    assert!(text.contains("\x1b[92mderivation checked"), "{text:?}");
+    assert!(text.contains("\x1b[91mno derivation found"), "{text:?}");
+    let output = infer(source, &["--fuel", "0", "--color", "always"]);
+
+    assert!(stdout(&output).contains("\x1b[93msearch limit reached"));
+}
