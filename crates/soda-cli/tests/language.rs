@@ -152,3 +152,31 @@ fn notation_output_and_named_premises_are_visible() {
     assert!(!text(&ascii).contains('⊢'));
 }
 
+#[test]
+fn source_stdin_rejects_unsound_typed_rules_and_circular_induction() {
+    let invalid = [
+        "module Bad; sort Expr; constructor lit(Int): Expr; function f(Expr): Expr; rule bad: f(lit(?n)) => lit(true);",
+        "module Bad; datatype Nat; constructor zero(): Nat; rule bad: zero => zero;",
+        "module Bad; eval apply(bind(x: Int, @x), false);",
+        "module Bad; datatype Nat; constructor zero(): Nat; constructor succ(Nat): Nat; function p(Nat): Bool; axiom base: p(zero) = true; induction circular on ?n: Nat: p(?n) = true { case zero { base; } case succ(k) { ih_k with {k = succ(?k)}; } }",
+    ];
+
+    for source in invalid {
+        let mut child = command()
+            .args(["check", "-"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(source.as_bytes())
+            .unwrap();
+        let output = child.wait_with_output().unwrap();
+
+        assert_eq!(output.status.code(), Some(2), "{}", text(&output));
+    }
+}
