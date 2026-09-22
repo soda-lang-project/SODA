@@ -89,3 +89,40 @@ fn typed_judgments_and_binders_execute_from_files_and_interactive_inputs() {
     assert!(text(&output).contains("0 answers, complete"));
 }
 
+#[test]
+fn induction_and_exact_finite_domains_have_checked_results() {
+    let output = soda(&["prove", "examples/induction.soda"]);
+
+    assert!(output.status.success(), "{}", text(&output));
+    assert!(text(&output).contains("theorem right_zero: 2 checked constructor cases"));
+    assert!(text(&output).contains("theorem boxed_right_zero"));
+    let output = soda(&["domains", "examples/domains.soda", "--trace"]);
+
+    assert!(output.status.success(), "{}", text(&output));
+    assert!(text(&output).contains("domain Functions: 11 elements"));
+    assert!(text(&output).contains("lfp(constant_true) = true"));
+    assert!(text(&output).contains("bottom <= true"));
+    let output = soda(&["domains", "examples/domains.soda", "negate(true)"]);
+
+    assert!(output.status.success());
+    assert!(text(&output).contains("negate(true) = false"));
+    let output = soda(&[
+        "correspond",
+        "examples/correspondence.soda",
+        "negate(meaning)",
+    ]);
+
+    assert!(output.status.success(), "{}", text(&output));
+    assert!(text(&output).contains("all 3 represented domain values"));
+    let output = soda(&[
+        "correspond",
+        "examples/correspondence.soda",
+        "negate(meaning)",
+        "--fuel",
+        "0",
+    ]);
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(text(&output).contains("correspondence not established"));
+}
+
