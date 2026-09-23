@@ -115,3 +115,66 @@ fn syntax_only_modules_cannot_silently_ignore_unresolved_imports() {
     );
 }
 
+#[test]
+fn generated_rust_preserves_the_linked_language_tour_without_import_runtime() {
+    let files = Files::new();
+    let workspace = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let loaded = soda_parser::load_module(workspace.join("examples/language-tour.soda")).unwrap();
+    assert!(loaded.module.imports.is_empty());
+    assert!(!loaded.module.records.is_empty());
+    assert!(!loaded.module.monads.is_empty());
+    assert!(
+        loaded
+            .module
+            .clause_details
+            .iter()
+            .any(|detail| !detail.bindings.is_empty())
+    );
+    let source = format!(
+        "{}\nfn main() {{ assert_eq!(format!(\"{{:?}}\", module()), {:?}); }}\n",
+        soda_codegen::emit_rust(&loaded.module),
+        format!("{:?}", loaded.module)
+    );
+    files.write("generated.rs", &source);
+    let rustc = std::env::var_os("RUSTC").unwrap_or_else(|| "rustc".into());
+    let library = files.0.join("libsoda_ast.rlib");
+    let ast = Command::new(&rustc)
+        .args([
+            "--edition=2024",
+            "--crate-type=rlib",
+            "--crate-name=soda_ast",
+            "-Dwarnings",
+        ])
+        .arg(workspace.join("crates/soda-ast/src/lib.rs"))
+        .arg("-o")
+        .arg(&library)
+        .output()
+        .unwrap();
+    assert!(
+        ast.status.success(),
+        "{}",
+        String::from_utf8_lossy(&ast.stderr)
+    );
+    let executable = files
+        .0
+        .join(format!("generated{}", std::env::consts::EXE_SUFFIX));
+    let compiled = Command::new(&rustc)
+        .args(["--edition=2024", "-Dwarnings", "--extern"])
+        .arg(format!("soda_ast={}", library.display()))
+        .arg(files.0.join("generated.rs"))
+        .arg("-o")
+        .arg(&executable)
+        .output()
+        .unwrap();
+    assert!(
+        compiled.status.success(),
+        "{}",
+        String::from_utf8_lossy(&compiled.stderr)
+    );
+    let restored = Command::new(executable).output().unwrap();
+    assert!(
+        restored.status.success(),
+        "{}",
+        String::from_utf8_lossy(&restored.stderr)
+    );
+}
