@@ -74,3 +74,27 @@ fn missing_import_points_at_the_import_declaration() {
     assert!(text.contains("cannot import `missing.soda`"), "{text}");
 }
 
+#[test]
+fn all_syntax_features_work_together_in_the_language_tour() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/language-tour.soda");
+    for command in ["check", "run", "denote", "infer"] {
+        let output = Command::new(env!("CARGO_BIN_EXE_soda"))
+            .arg(command)
+            .arg(&path)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{command}: {}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        if command == "infer" {
+            assert!(
+                String::from_utf8_lossy(&output.stdout)
+                    .contains("observed(11, cons(15, cons(11, end)))")
+            );
+        }
+    }
+}
+
