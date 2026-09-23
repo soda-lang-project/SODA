@@ -62,3 +62,15 @@ fn imported_certificate_errors_highlight_the_certificate_in_its_source() {
     assert!(text.contains("found:    1"), "{text}");
 }
 
+#[test]
+fn missing_import_points_at_the_import_declaration() {
+    let files = Files::new();
+    files.write("main.soda", "module Main;\nimport \"missing.soda\";\n");
+    let output = files.check();
+    let text = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(text.contains("E0102"), "{text}");
+    assert!(text.contains("main.soda:2:"), "{text}");
+    assert!(text.contains("cannot import `missing.soda`"), "{text}");
+}
+
