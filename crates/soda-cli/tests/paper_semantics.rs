@@ -115,3 +115,47 @@ fn evaluation_contexts_enforce_order_and_do_not_reduce_under_values() {
     answers(&r, &format!("step({term}, ?next)"), &[]);
 }
 
+#[test]
+fn ccs_enumerates_choice_interleavings_synchronization_and_restriction() {
+    let r = relations(CCS);
+    let p = "parallel(prefix(input(a), stop), prefix(output(a), stop))";
+    answers(
+        &r,
+        &format!("transition({p}, ?label, ?next)"),
+        &[
+            &format!("transition({p}, input(a), parallel(stop, prefix(output(a), stop)))"),
+            &format!("transition({p}, output(a), parallel(prefix(input(a), stop), stop))"),
+            &format!("transition({p}, tau, parallel(stop, stop))"),
+        ],
+    );
+    answers(
+        &r,
+        &format!("transition(restrict(a, {p}), ?label, ?next)"),
+        &[&format!(
+            "transition(restrict(a, {p}), tau, restrict(a, parallel(stop, stop)))"
+        )],
+    );
+    answers(
+        &r,
+        "transition(choice(prefix(input(a), stop), prefix(output(b), stop)), ?label, ?next)",
+        &[
+            "transition(choice(prefix(input(a), stop), prefix(output(b), stop)), input(a), stop)",
+            "transition(choice(prefix(input(a), stop), prefix(output(b), stop)), output(b), stop)",
+        ],
+    );
+    answers(
+        &r,
+        "transition(restrict(a, prefix(input(b), stop)), ?label, ?next)",
+        &["transition(restrict(a, prefix(input(b), stop)), input(b), restrict(a, stop))"],
+    );
+
+    for query in [
+        "transition(parallel(prefix(input(a), stop), prefix(output(b), stop)), tau, ?next)",
+        "transition(parallel(prefix(input(a), stop), prefix(input(a), stop)), tau, ?next)",
+        "transition(restrict(a, prefix(input(a), stop)), ?label, ?next)",
+        "transition(stop, ?label, ?next)",
+    ] {
+        answers(&r, query, &[]);
+    }
+}
+
