@@ -98,3 +98,20 @@ fn all_syntax_features_work_together_in_the_language_tour() {
     }
 }
 
+#[test]
+fn syntax_only_modules_cannot_silently_ignore_unresolved_imports() {
+    let module = soda_parser::parse_module("module Unlinked; import soda.collections;").unwrap();
+    assert!(
+        soda_sorts::validate_module(&module)
+            .unwrap_err()
+            .to_string()
+            .contains("unresolved imports")
+    );
+    assert!(
+        soda_verifier::validate_module(&module)
+            .unwrap_err()
+            .to_string()
+            .contains("unresolved imports")
+    );
+}
+
