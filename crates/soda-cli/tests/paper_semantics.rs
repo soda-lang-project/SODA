@@ -1,0 +1,75 @@
+use soda_parser::{parse_module, parse_term};
+use soda_relations::{Relations, SearchConfig, SearchResult};
+use std::collections::BTreeSet;
+use std::path::PathBuf;
+use std::process::Command;
+
+const STLC: &str = include_str!("../../../examples/stlc.soda");
+const CONTEXTS: &str = include_str!("../../../examples/evaluation-contexts.soda");
+const CCS: &str = include_str!("../../../examples/ccs.soda");
+
+fn relations(source: &str) -> Relations {
+    Relations::from_module(&parse_module(source).unwrap()).unwrap()
+}
+
+fn search(relations: &Relations, source: &str) -> SearchResult {
+    let query = parse_term(source).unwrap();
+    let result = relations
+        .search_checked(&query, &SearchConfig::default())
+        .unwrap();
+    assert!(result.complete, "incomplete search for {source}");
+    for answer in &result.answers {
+        assert!(soda_relations::answer_matches(&query, answer));
+        relations.verify(&answer.derivation).unwrap();
+    }
+
+    result
+}
+
+fn answers(relations: &Relations, query: &str, expected: &[&str]) {
+    let result = search(relations, query);
+    let actual: BTreeSet<_> = result.answers.iter().map(|a| a.term.clone()).collect();
+    let expected: BTreeSet<_> = expected.iter().map(|s| parse_term(s).unwrap()).collect();
+    assert_eq!(actual, expected, "{query}");
+    assert_eq!(
+        result.answers.len(),
+        expected.len(),
+        "duplicate answers: {query}"
+    );
+}
+
+#[test]
+fn stlc_types_closures_shadowing_and_call_by_value() {
+    let r = relations(STLC);
+    answers(
+        &r,
+        "typing(empty, lam(bool_type, var(zero)), ?t)",
+        &["typing(empty, lam(bool_type, var(zero)), arrow(bool_type, bool_type))"],
+    );
+    for body in ["var(succ(zero))", "var(zero)"] {
+        let query =
+            format!("evaluates(nil, app(app(lam(bool_type, lam(bool_type, {body})), tt), ff), ?v)");
+        let value = if body == "var(zero)" { "no" } else { "yes" };
+
+        answers(&r, &query, &[&query.replace("?v", value)]);
+    }
+
+    let query = "evaluates(nil, app(lam(arrow(bool_type, bool_type), app(var(zero), tt)), lam(bool_type, var(zero))), ?v)";
+    answers(&r, query, &[&query.replace("?v", "yes")]);
+    for query in [
+        "typing(empty, app(tt, ff), ?t)",
+        "typing(empty, var(zero), ?t)",
+        "typing(empty, cond(tt, tt, lam(bool_type, var(zero))), ?t)",
+        "typing(empty, app(lam(bool_type, var(zero)), lam(bool_type, var(zero))), ?t)",
+        "evaluates(nil, app(lam(bool_type, tt), var(zero)), ?v)",
+    ] {
+        answers(&r, query, &[]);
+    }
+
+    answers(
+        &r,
+        "evaluates(nil, cond(tt, tt, var(zero)), ?v)",
+        &["evaluates(nil, cond(tt, tt, var(zero)), yes)"],
+    );
+}
+
