@@ -73,3 +73,45 @@ fn stlc_types_closures_shadowing_and_call_by_value() {
     );
 }
 
+#[test]
+fn evaluation_contexts_enforce_order_and_do_not_reduce_under_values() {
+    let r = relations(CONTEXTS);
+
+    for (input, output) in [
+        (
+            "pair(cond(tt, ff, tt), cond(ff, ff, tt))",
+            "pair(ff, cond(ff, ff, tt))",
+        ),
+        ("pair(ff, cond(ff, ff, tt))", "pair(ff, tt)"),
+        ("first(pair(tt, cond(ff, ff, tt)))", "first(pair(tt, tt))"),
+        ("first(pair(tt, tt))", "tt"),
+        ("cond(tt, ff, cond(tt, tt, ff))", "ff"),
+    ] {
+        answers(
+            &r,
+            &format!("step({input}, ?next)"),
+            &[&format!("step({input}, {output})")],
+        );
+    }
+
+    for query in [
+        "step(pair(tt, ff), ?next)",
+        "step(first(tt), ?next)",
+        "step(pair(first(tt), cond(tt, ff, tt)), ?next)",
+    ] {
+        answers(&r, query, &[]);
+    }
+
+    let mut term = parse_term("first(pair(cond(ff, ff, tt), cond(tt, ff, tt)))").unwrap();
+
+    for _ in 0..3 {
+        let result = search(&r, &format!("step({term}, ?next)"));
+
+        assert_eq!(result.answers.len(), 1);
+        term = result.answers[0].bindings["next"].clone();
+    }
+
+    assert_eq!(term, parse_term("tt").unwrap());
+    answers(&r, &format!("step({term}, ?next)"), &[]);
+}
+
