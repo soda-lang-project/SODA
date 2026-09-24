@@ -195,3 +195,30 @@ fn paper_derivations_are_independently_checked_and_limits_stay_unknown() {
     }
 }
 
+#[test]
+fn paper_examples_execute_through_cli_with_both_notation_styles() {
+    for file in ["stlc", "evaluation-contexts", "ccs"] {
+        for style in ["unicode", "ascii"] {
+            let output = Command::new(env!("CARGO_BIN_EXE_soda"))
+                .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
+                .args([
+                    "infer",
+                    &format!("examples/{file}.soda"),
+                    "--notation",
+                    style,
+                    "--trace",
+                ])
+                .output()
+                .unwrap();
+            let stdout = String::from_utf8_lossy(&output.stdout);
+
+            assert!(
+                output.status.success(),
+                "{file}/{style}: {stdout}\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert!(!stdout.contains("incomplete"), "{stdout}");
+            assert!(stdout.contains("by "), "missing derivation: {stdout}");
+        }
+    }
+}
