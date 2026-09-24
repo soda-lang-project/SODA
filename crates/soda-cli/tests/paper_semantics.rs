@@ -159,3 +159,39 @@ fn ccs_enumerates_choice_interleavings_synchronization_and_restriction() {
     }
 }
 
+#[test]
+fn paper_derivations_are_independently_checked_and_limits_stay_unknown() {
+    for (source, query) in [
+        (
+            STLC,
+            "evaluates(nil, app(lam(bool_type, var(zero)), tt), ?v)",
+        ),
+        (CONTEXTS, "step(cond(tt, ff, tt), ?next)"),
+        (
+            CCS,
+            "transition(restrict(a, parallel(prefix(input(a), stop), prefix(output(a), stop))), ?label, ?next)",
+        ),
+    ] {
+        let r = relations(source);
+        let result = search(&r, query);
+
+        assert_eq!(result.answers.len(), 1);
+        let mut forged = result.answers[0].derivation.clone();
+        forged.premises.clear();
+
+        assert!(r.verify(&forged).is_err());
+        let bounded = r
+            .search_checked(
+                &parse_term(query).unwrap(),
+                &SearchConfig {
+                    max_attempts: 1,
+                    ..SearchConfig::default()
+                },
+            )
+            .unwrap();
+
+        assert!(!bounded.complete);
+        assert!(bounded.answers.is_empty());
+    }
+}
+
