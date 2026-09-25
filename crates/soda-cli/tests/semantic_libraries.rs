@@ -67,3 +67,48 @@ fn state_monad_laws_and_state_threading() {
     }
 }
 
+#[test]
+fn exceptions_obey_monad_laws_and_propagate_before_division() {
+    let engine = engine(EXCEPTIONS);
+    for n in [-3, 0, 9] {
+        equal(
+            &engine,
+            &format!(
+                "exception_bind(exception_unit({n}), bind(x: Int, exception_unit(add(@x, 1))))"
+            ),
+            &format!("exception_unit(add({n}, 1))"),
+        );
+    }
+    for computation in ["exception_returned(7)", "exception_raised(exception_error)"] {
+        equal(
+            &engine,
+            &format!("exception_bind({computation}, bind(x: Int, exception_unit(@x)))"),
+            computation,
+        );
+        equal(
+            &engine,
+            &format!(
+                "exception_bind(exception_bind({computation}, bind(x: Int, exception_div(@x, 2))), bind(y: Int, exception_unit(add(@y, 1))))"
+            ),
+            &format!(
+                "exception_bind({computation}, bind(x: Int, exception_bind(exception_div(@x, 2), bind(y: Int, exception_unit(add(@y, 1))))))"
+            ),
+        );
+    }
+    equal(
+        &engine,
+        "exception_bind(exception_raised(exception_error), bind(x: Int, exception_div(@x, 0)))",
+        "exception_raised(exception_error)",
+    );
+    equal(
+        &engine,
+        "exception_div(1, 0)",
+        "exception_raised(exception_zero_divisor)",
+    );
+    equal(
+        &engine,
+        "exception_catch(exception_div(1, 0), bind(e: ExceptionError, exception_unit(42)))",
+        "exception_returned(42)",
+    );
+}
+
