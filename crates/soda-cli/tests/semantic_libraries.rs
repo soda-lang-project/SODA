@@ -149,3 +149,30 @@ fn probability_laws_compare_exact_weights_extensionally() {
     equal(&engine, "prob_le(prob_zero, prob_unit(false))", "true");
 }
 
+#[test]
+fn collections_preserve_identity_associativity_and_fold_values() {
+    let engine = engine(COLLECTIONS);
+    let xs = "cons(1, cons(2, end))";
+    let ys = "cons(3, end)";
+    equal(&engine, &format!("list_append(end, {xs})"), xs);
+    equal(&engine, &format!("list_append({xs}, end)"), xs);
+    equal(
+        &engine,
+        &format!("list_append(list_append({xs}, {ys}), {xs})"),
+        &format!("list_append({xs}, list_append({ys}, {xs}))"),
+    );
+    equal(&engine, &format!("list_map(bind(x: Int, @x), {xs})"), xs);
+    equal(
+        &engine,
+        &format!("list_length(list_append({xs}, {ys}))"),
+        "3",
+    );
+    equal(
+        &engine,
+        &format!("list_fold(bind(x: Int, bind(y: Int, add(@x, @y))), 0, list_append({xs}, {ys}))"),
+        "6",
+    );
+    equal(&engine, &format!("list_member(2, {xs})"), "true");
+    equal(&engine, &format!("list_member(9, {xs})"), "false");
+}
+
