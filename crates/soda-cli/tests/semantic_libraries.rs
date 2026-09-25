@@ -112,3 +112,40 @@ fn exceptions_obey_monad_laws_and_propagate_before_division() {
     );
 }
 
+#[test]
+fn probability_laws_compare_exact_weights_extensionally() {
+    let engine = engine(PROBABILITY);
+    let same = |left: &str, right: &str| {
+        equal(&engine, &format!("prob_equal({left}, {right})"), "true");
+    };
+    for p in ["fraction(0, 1)", "fraction(1, 3)", "fraction(1, 1)"] {
+        let distribution = format!("prob_mix({p}, prob_unit(true), prob_zero)");
+        same(
+            &format!("prob_bind({distribution}, bind(x: Bool, prob_unit(@x)))"),
+            &distribution,
+        );
+        same(
+            &format!(
+                "prob_bind(prob_bind({distribution}, bind(x: Bool, prob_unit(not(@x)))), bind(y: Bool, prob_unit(not(@y))))"
+            ),
+            &format!(
+                "prob_bind({distribution}, bind(x: Bool, prob_bind(prob_unit(not(@x)), bind(y: Bool, prob_unit(not(@y))))))"
+            ),
+        );
+    }
+    same(
+        "prob_bind(prob_unit(true), bind(x: Bool, prob_unit(not(@x))))",
+        "prob_unit(false)",
+    );
+    same(
+        "prob_mix(fraction(1, 2), prob_unit(true), prob_zero)",
+        "prob_weights(fraction(0, 1), fraction(1, 2))",
+    );
+    equal(
+        &engine,
+        "rle(prob_mass(prob_mix(fraction(1, 3), prob_unit(true), prob_zero)), fraction(1, 3))",
+        "true",
+    );
+    equal(&engine, "prob_le(prob_zero, prob_unit(false))", "true");
+}
+
