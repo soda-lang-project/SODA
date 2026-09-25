@@ -176,3 +176,28 @@ fn collections_preserve_identity_associativity_and_fold_values() {
     equal(&engine, &format!("list_member(9, {xs})"), "false");
 }
 
+#[test]
+fn imported_libraries_execute_through_both_cli_evaluators() {
+    for command in ["run", "denote"] {
+        let output = support::run(&[command, "examples/semantic-libraries.soda"]);
+        assert!(
+            output.status.success(),
+            "{command}: {}\n{}",
+            support::stdout(&output),
+            support::stderr(&output)
+        );
+        let stdout = support::stdout(&output);
+        for expected in [
+            "state_answer(14, 5)",
+            "exception_returned(5)",
+            "exception_returned(42)",
+            "cons(2, cons(4, end))",
+        ] {
+            assert!(
+                stdout.contains(expected),
+                "{command} missing {expected}: {stdout}"
+            );
+        }
+    }
+}
+
