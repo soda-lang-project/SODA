@@ -201,3 +201,31 @@ fn imported_libraries_execute_through_both_cli_evaluators() {
     }
 }
 
+#[test]
+fn imported_surface_syntax_lowers_to_checked_equations_in_both_engines() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/semantic-libraries.soda");
+    let loaded = soda_parser::load_module(&path).unwrap();
+    soda_sorts::validate_module(&loaded.module).unwrap();
+    soda_verifier::validate_module(&loaded.module).unwrap();
+    let engine = Engine::new(loaded.module.rules).unwrap();
+    let expected = [
+        "state_answer(14, 5)",
+        "exception_returned(5)",
+        "exception_returned(42)",
+        "true",
+        "cons(2, cons(4, end))",
+        "6",
+    ];
+    assert_eq!(loaded.module.evaluations.len(), expected.len());
+    for (query, expected) in loaded.module.evaluations.iter().zip(expected) {
+        for result in [
+            engine.evaluate(query, &Config::default()),
+            engine.denote(query, &Config::default()),
+        ] {
+            assert_eq!(result.status, Status::NormalForm, "{query}: {result:?}");
+            assert_eq!(result.term, parse_term(expected).unwrap(), "{query}");
+        }
+    }
+}
+
