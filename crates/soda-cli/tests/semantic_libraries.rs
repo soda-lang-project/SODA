@@ -286,3 +286,35 @@ fn natural_arithmetic_agrees_with_integer_arithmetic() {
     }
 }
 
+#[test]
+fn typed_judgments_reuse_imported_syntax_notation_and_checked_derivations() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/typed-judgments.soda");
+    let loaded = soda_parser::load_module(path).unwrap();
+    soda_sorts::validate_module(&loaded.module).unwrap();
+    soda_verifier::verify_module(&loaded.module).unwrap();
+    let relations = soda_relations::Relations::from_module(&loaded.module).unwrap();
+    for (query, expected) in loaded.module.queries.iter().zip([
+        "typing(empty, plus(lit(1), lit(2)), int_type)",
+        "typing(empty, lit(3), int_type)",
+        "small_step(plus(lit(0), lit(4)), lit(4))",
+        "big_step(lit(5), 5)",
+        "meaning(lit(6), empty, 6)",
+        "triple(lit(7), lit(7), lit(7))",
+        "satisfies(empty, lit(8))",
+        "meaning(lit(9), empty, 9)",
+        "meaning(lit(10), empty, 10)",
+        "big_step(plus(lit(2), plus(lit(3), lit(4))), 9)",
+        "meaning(plus(lit(2), lit(3)), empty, 5)",
+    ]) {
+        let search = relations
+            .search_checked(query, &soda_relations::SearchConfig::default())
+            .unwrap();
+        assert!(search.complete, "{query}");
+        assert_eq!(search.answers.len(), 1, "{query}");
+        assert_eq!(search.answers[0].term, parse_term(expected).unwrap());
+        relations.verify(&search.answers[0].derivation).unwrap();
+    }
+    assert_eq!(loaded.module.queries.len(), 11);
+}
+
