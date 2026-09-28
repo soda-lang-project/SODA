@@ -266,3 +266,23 @@ fn prelude_reuses_checked_natural_theorems_and_executes_all_library_families() {
     }
 }
 
+#[test]
+fn natural_arithmetic_agrees_with_integer_arithmetic() {
+    let engine = engine("module Naturals; import soda.data.nat;");
+    let nat = |n: usize| format!("{}zero{}", "succ(".repeat(n), ")".repeat(n));
+    for a in 0..=4 {
+        for b in 0..=4 {
+            equal(
+                &engine,
+                &format!("nat_to_int(nat_add({}, {}))", nat(a), nat(b)),
+                &(a + b).to_string(),
+            );
+            equal(
+                &engine,
+                &format!("nat_to_int(nat_mul({}, {}))", nat(a), nat(b)),
+                &(a * b).to_string(),
+            );
+        }
+    }
+}
+
