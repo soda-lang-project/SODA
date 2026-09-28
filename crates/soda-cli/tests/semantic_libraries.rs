@@ -229,3 +229,40 @@ fn imported_surface_syntax_lowers_to_checked_equations_in_both_engines() {
     }
 }
 
+#[test]
+fn prelude_reuses_checked_natural_theorems_and_executes_all_library_families() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/standard-library.soda");
+    let module = soda_parser::load_module(&path).unwrap().module;
+    soda_sorts::validate_module(&module).unwrap();
+    soda_verifier::validate_module(&module).unwrap();
+    let engine = Engine::new(module.rules).unwrap();
+    let expected = [
+        "6",
+        "3",
+        "true",
+        "state_answer(14, 5)",
+        "exception_returned(43)",
+        "true",
+    ];
+    assert_eq!(module.evaluations.len(), expected.len());
+    for (term, expected) in module.evaluations.iter().zip(expected) {
+        for result in [
+            engine.evaluate(term, &Config::default()),
+            engine.denote(term, &Config::default()),
+        ] {
+            assert_eq!(result.status, Status::NormalForm, "{term}: {result:?}");
+            assert_eq!(result.term, parse_term(expected).unwrap());
+        }
+    }
+    for command in ["check", "prove", "compare"] {
+        let output = support::run(&[command, "examples/standard-library.soda"]);
+        assert!(
+            output.status.success(),
+            "{command}: {}{}",
+            support::stdout(&output),
+            support::stderr(&output)
+        );
+    }
+}
+
