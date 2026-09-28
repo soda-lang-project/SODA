@@ -318,3 +318,52 @@ fn typed_judgments_reuse_imported_syntax_notation_and_checked_derivations() {
     assert_eq!(loaded.module.queries.len(), 11);
 }
 
+#[test]
+fn integer_sets_preserve_membership_inclusion_and_representation_order() {
+    let engine = engine("module Sets; import soda.collections.sets;");
+    let list = |mask: u8| {
+        (0..3)
+            .rev()
+            .filter(|n| mask & (1 << n) != 0)
+            .fold("end".to_string(), |tail, n| format!("cons({n}, {tail})"))
+    };
+    for a in 0..8 {
+        for b in 0..8 {
+            let left = list(a);
+            let right = list(b);
+            equal(
+                &engine,
+                &format!("set_subset({left}, {right})"),
+                &(a & !b == 0).to_string(),
+            );
+            for n in 0..3 {
+                equal(
+                    &engine,
+                    &format!("list_member({n}, set_union({left}, {right}))"),
+                    &((a | b) & (1 << n) != 0).to_string(),
+                );
+            }
+        }
+    }
+    equal(&engine, "set_range(0)", "end");
+    equal(
+        &engine,
+        "set_range(4)",
+        "cons(3, cons(2, cons(1, cons(0, end))))",
+    );
+    equal(
+        &engine,
+        "set_union(cons(1, cons(2, end)), cons(3, cons(2, end)))",
+        "cons(3, cons(2, cons(1, end)))",
+    );
+    equal(
+        &engine,
+        "set_insert(1, cons(1, cons(1, end)))",
+        "cons(1, cons(1, end))",
+    );
+    equal(
+        &engine,
+        "set_subset(cons(1, cons(1, end)), cons(1, end))",
+        "true",
+    );
+}
