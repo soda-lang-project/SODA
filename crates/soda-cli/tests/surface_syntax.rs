@@ -48,3 +48,32 @@ fn combined_records_lists_arrows_and_do_have_concrete_results() {
     );
 }
 
+#[test]
+fn do_binders_preserve_shadowing_and_capture_avoidance_under_rewriting() {
+    let source = "module Hygiene; import soda.effects.state;
+    function preserve(Int -> Int): Int -> StateResult;
+    rule preserve_value: preserve(?f) => do State { x <- state_unit(7); return apply(?f,x); };
+    function meta(Int): Int -> StateResult;
+    rule distinct_meta: meta(?x) => do State { x <- state_get; return add(x,?x); };
+    ";
+    let loaded =
+        load_module_source("Hygiene", source, PathBuf::from(env!("CARGO_MANIFEST_DIR"))).unwrap();
+    soda_sorts::validate_module(&loaded.module).unwrap();
+    assert_both(
+        &loaded.module,
+        "apply(apply(bind(x:Int,preserve(bind(y:Int,add(@x,@y)))),5),0)",
+        "state_answer(12,0)",
+    );
+    assert_both(&loaded.module, "apply(meta(8),3)", "state_answer(11,3)");
+    assert_both(
+        &loaded.module,
+        "apply(bind(x:Int, apply(do State { x <- state_get; return x; }, @x)),7)",
+        "state_answer(7,7)",
+    );
+    assert_both(
+        &loaded.module,
+        "apply(do State { x <- state_unit(2); return apply(bind(x:Int,add(x,1)),3); },0)",
+        "state_answer(4,0)",
+    );
+}
+
