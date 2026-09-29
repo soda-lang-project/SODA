@@ -133,3 +133,49 @@ fn grouped_datatypes_support_induction_and_existing_duplicate_checks() {
     assert!(support::stderr(&duplicate).contains("E1004"));
 }
 
+#[test]
+fn typed_functions_support_guards_forward_recursion_higher_order_values_and_named_traces() {
+    let source = r#"module Functions;
+        function even(Int): Bool {
+            case even_zero: (0) => true;
+            case even_step: (?n) => odd(sub(?n, 1)) when gt(?n, 0);
+        }
+        function odd(Int): Bool {
+            case odd_zero: (0) => false;
+            case odd_step: (?n) => even(sub(?n, 1)) when gt(?n, 0);
+        }
+        function invoke(?f: Int -> Int, ?n: Int): Int => apply(?f, ?n);
+        function main(): Int => invoke(bind(x: Int, add(@x, 1)), 41);
+        eval even(4);
+        eval main;
+    "#;
+    let module = load_module_source("<functions>", source, std::path::Path::new("."))
+        .unwrap()
+        .module;
+    soda_sorts::validate_module(&module).unwrap();
+    soda_verifier::verify_module(&module).unwrap();
+    for n in 0..=5 {
+        assert_both(
+            &module,
+            &format!("even({n})"),
+            if n % 2 == 0 { "true" } else { "false" },
+        );
+    }
+    assert_both(&module, "main", "42");
+    let output = support::stdin_command("run", source, &["--trace"]);
+    assert!(output.status.success(), "{}", support::stderr(&output));
+    let text = support::stdout(&output);
+    assert!(text.contains("even_step"), "{text}");
+    assert!(text.contains("invoke"), "{text}");
+    let bad = support::stdin_command(
+        "check",
+        "module Bad; function f(Int): Int { case wrong_result: (?x) => false; }",
+        &[],
+    );
+    assert_eq!(bad.status.code(), Some(2));
+    let text = support::stderr(&bad);
+    assert!(text.contains("rule `wrong_result`"), "{text}");
+    assert!(text.contains("expected `Int`, found `Bool`"), "{text}");
+    let free = support::stdin_command("check", "module Bad; function f(?x: Int): Int => ?y;", &[]);
+    assert_eq!(free.status.code(), Some(2));
+}
