@@ -77,3 +77,25 @@ fn do_binders_preserve_shadowing_and_capture_avoidance_under_rewriting() {
     );
 }
 
+#[test]
+fn cli_runs_and_denotes_demo_and_interactive_surface_terms() {
+    for args in [
+        vec!["run", "examples/surface-syntax.soda"],
+        vec!["denote", "examples/surface-syntax.soda"],
+        vec![
+            "run",
+            "examples/surface-syntax.soda",
+            "apply(do State { x <- state_get; return add(x,1); },5)",
+        ],
+    ] {
+        let output = support::run(&args);
+        let text = format!(
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(output.status.success(), "{text}");
+        assert!(text.contains("state_answer("), "{text}");
+    }
+}
+
