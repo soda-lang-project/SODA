@@ -116,3 +116,27 @@ fn stdio_lifecycle_unsaved_edits_features_and_diagnostic_clearing() {
     );
 }
 
+#[test]
+fn formatter_stdin_check_and_invalid_input_exit_codes() {
+    let source = "module X;\nrule r: f(1,2)=>1;  \n";
+    let output = support::stdin_command("fmt", source, &[]);
+    assert!(output.status.success());
+    let formatted = support::stdout(&output);
+    assert!(formatted.contains("f(1, 2) => 1;"));
+    assert_eq!(
+        support::stdin_command("fmt", source, &["--check"])
+            .status
+            .code(),
+        Some(1)
+    );
+    assert!(
+        support::stdin_command("fmt", &formatted, &["--check"])
+            .status
+            .success()
+    );
+    assert_eq!(
+        support::stdin_command("fmt", "\"", &[]).status.code(),
+        Some(2)
+    );
+}
+
