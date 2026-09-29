@@ -140,3 +140,10 @@ fn formatter_stdin_check_and_invalid_input_exit_codes() {
     );
 }
 
+#[test]
+fn surface_conditionals_preserve_lazy_branch_evaluation() {
+    let output =
+        support::stdin_command("run", "module X; eval if false then div(1, 0) else 7;", &[]);
+    assert!(output.status.success(), "{}", support::stderr(&output));
+    assert!(support::stdout(&output).contains("7"));
+}
