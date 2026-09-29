@@ -99,3 +99,37 @@ fn cli_runs_and_denotes_demo_and_interactive_surface_terms() {
     }
 }
 
+#[test]
+fn grouped_datatypes_support_induction_and_existing_duplicate_checks() {
+    let source = r#"module Grouped;
+        datatype Nat { constructor zero(); constructor succ(Nat); }
+        function plus(Nat, Nat): Nat;
+        rule add_zero: plus(zero, ?m) => ?m;
+        rule add_succ: plus(succ(?n), ?m) => succ(plus(?n, ?m));
+        axiom plus_zero: plus(zero, ?m) = ?m;
+        axiom plus_succ: plus(succ(?n), ?m) = succ(plus(?n, ?m));
+        induction right_zero on ?n: Nat: plus(?n, zero) = ?n {
+            case zero { plus_zero with {m = zero}; }
+            case succ(k) {
+                plus_succ with {n = ?k, m = zero};
+                ih_k at [0] with {k = ?k};
+            }
+        }
+        eval plus(succ(zero), succ(zero));
+    "#;
+    let output = support::stdin_command("prove", source, &[]);
+    assert!(output.status.success(), "{}", support::stderr(&output));
+    assert!(support::stdout(&output).contains("theorem right_zero"));
+    let module = load_module_source("<grouped>", source, std::path::Path::new("."))
+        .unwrap()
+        .module;
+    assert_both(&module, "plus(succ(zero), succ(zero))", "succ(succ(zero))");
+    let duplicate = support::stdin_command(
+        "check",
+        "module Bad; datatype V { constructor v(); } constructor v(): V;",
+        &[],
+    );
+    assert_eq!(duplicate.status.code(), Some(2));
+    assert!(support::stderr(&duplicate).contains("E1004"));
+}
+
